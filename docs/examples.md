@@ -60,17 +60,18 @@ gobankcli connect \
 ```
 
 Register `http://127.0.0.1:8787/enablebanking/callback` as the app redirect
-URL. If you need a hosted or HTTPS redirect URL, use the manual callback flow:
+URL. Use the manual callback flow only when you intentionally want to handle the
+callback somewhere else, for example on a hosted callback URL you control:
 
 ```bash
 gobankcli connect \
   --provider enablebanking \
   --institution BE:Belfius \
-  --redirect https://example.test/callback
+  --redirect https://your-domain.example/callback
 
 gobankcli authorize \
   --provider enablebanking \
-  --url "https://example.test/callback?code=CODE&state=STATE" \
+  --url "https://your-domain.example/callback?code=CODE&state=STATE" \
   --institution BE:Belfius
 ```
 

@@ -26,9 +26,8 @@ It is built for terminals, shell scripts, cron, and coding agents:
 - normalized transaction CSV export
 - read-only `query`/`sql` against the archive
 
-Pending transactions are not archived yet. GoCardless transaction payloads can
-include both `booked` and `pending`; `gobankcli` currently stores booked
-transactions only.
+Only booked transactions are archived. Pending transactions from provider
+payloads are ignored for now.
 
 ## Install
 
@@ -64,7 +63,7 @@ gobankcli institutions --country BE --query belfius
 gobankcli institutions --provider enablebanking --country BE --query belfius
 ```
 
-Sync after a GoCardless consent exists:
+Sync after the GoCardless setup below returns a requisition ID:
 
 ```bash
 gobankcli accounts --connection REQUISITION_ID
@@ -118,18 +117,21 @@ gobankcli institutions --country BE --query belfius
 Use the provider institution ID from the output, for example
 `BELFIUS_GKCCBEBB`.
 
-4. Create a consent/requisition:
+4. Create a consent/requisition. Set `GOCARDLESS_REDIRECT_URL` to the browser
+   landing URL you want GoCardless to use after bank authentication:
 
 ```bash
 gobankcli connect \
   --institution BELFIUS_GKCCBEBB \
-  --redirect https://example.test/callback
+  --redirect "$GOCARDLESS_REDIRECT_URL"
 ```
 
-The redirect URL is where GoCardless sends the browser after bank
-authentication. For local/manual testing it only needs to be a valid URL you can
-recognize after returning from the bank flow; `gobankcli` does not run a local
-web server.
+GoCardless requires this `redirect` URL when creating a requisition.
+`gobankcli` does not read the GoCardless callback; it uses the requisition ID
+from `connect` for later `accounts` and `sync` calls. For one-person manual use,
+the URL only needs to be a valid URL you recognize after the bank flow. Use your
+real landing page if you have one; otherwise use another valid URL you can
+identify as the post-consent landing page.
 
 The command prints:
 
@@ -163,8 +165,10 @@ If credentials are missing, live provider commands fail with
 ## Enable Banking / Belfius Setup
 
 This assumes an Enable Banking application with read-only account information
-access, a registered redirect URL, application ID, and downloaded RSA private
-key. For the local callback flow, register:
+access, application ID, and downloaded RSA private key. Enable Banking requires
+a redirect URL in the authorization request and sends the browser back there
+with `code` and `state`. For the CLI listener flow, register this exact redirect
+URL in your Enable Banking application:
 
 ```text
 http://127.0.0.1:8787/enablebanking/callback
@@ -200,29 +204,33 @@ gobankcli connect \
   --listen 127.0.0.1:8787
 ```
 
-The command prints a browser URL on stderr, waits for one callback on the
+The command prints the browser URL on stderr, waits for one callback on the
 loopback listener, validates `state`, exchanges the callback `code`, archives
-the session/accounts, then exits. Use the returned session ID for sync.
-Because this waits for browser consent, it is not available with `--no-input`.
+the session/accounts, then exits. The `provider_connection_id` in the output is
+the Enable Banking session ID to use with `sync`. Because this waits for browser
+consent, it is not available with `--no-input`.
 
-If Enable Banking requires a hosted or HTTPS redirect URL for your app, use the
-manual fallback:
+Use the manual fallback only when you intentionally want to handle the callback
+somewhere else, for example on a hosted callback URL you control. In that case,
+the `--redirect` value must be a real URL registered in your Enable Banking
+application. Set `ENABLEBANKING_REDIRECT_URL` to that exact registered URL:
 
 ```bash
 gobankcli connect \
   --provider enablebanking \
   --institution BE:Belfius \
-  --redirect https://example.test/callback
+  --redirect "$ENABLEBANKING_REDIRECT_URL"
 ```
 
-Open `redirect_url`, complete the bank flow, then copy the full callback URL.
+Open `redirect_url`, complete the bank flow, then copy the full callback URL
+from the browser address bar into `ENABLEBANKING_CALLBACK_URL`.
 
 4. Exchange a manual callback:
 
 ```bash
 gobankcli authorize \
   --provider enablebanking \
-  --url "https://example.test/callback?code=CODE&state=STATE" \
+  --url "$ENABLEBANKING_CALLBACK_URL" \
   --institution BE:Belfius
 ```
 
@@ -311,9 +319,9 @@ country = "BE"
 gobankcli doctor
 gobankcli init
 gobankcli institutions --country BE --query belfius
-gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
+gobankcli connect --institution BELFIUS_GKCCBEBB --redirect "$GOCARDLESS_REDIRECT_URL"
 gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:8787
-gobankcli authorize --provider enablebanking --url "https://example.test/callback?code=CODE&state=STATE" --institution BE:Belfius
+gobankcli authorize --provider enablebanking --url "$ENABLEBANKING_CALLBACK_URL" --institution BE:Belfius
 gobankcli accounts --connection PROVIDER_CONNECTION_ID
 gobankcli sync --connection PROVIDER_CONNECTION_ID --from 2026-01-01
 gobankcli status

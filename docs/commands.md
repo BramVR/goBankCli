@@ -51,7 +51,7 @@ institution ID after the provider response is normalized.
 
 ```bash
 gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
-gobankcli connect --provider enablebanking --institution BE:Belfius --redirect https://example.test/callback
+gobankcli connect --provider enablebanking --institution BE:Belfius --redirect https://your-domain.example/callback
 gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:8787
 ```
 
@@ -69,7 +69,7 @@ waits. Because it waits for browser consent, `--listen` is rejected with
 ## authorize
 
 ```bash
-gobankcli authorize --provider enablebanking --url "https://example.test/callback?code=CODE&state=STATE" --institution BE:Belfius
+gobankcli authorize --provider enablebanking --url "https://your-domain.example/callback?code=CODE&state=STATE" --institution BE:Belfius
 gobankcli authorize --provider enablebanking --code CODE --state STATE --institution BE:Belfius
 ```
 
