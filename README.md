@@ -32,6 +32,7 @@ gobankcli accounts --connection REQUISITION_ID
 gobankcli sync --connection REQUISITION_ID --from 2026-01-01
 gobankcli status
 gobankcli export
+gobankcli query "select count(*) as transactions from transactions"
 ```
 
 GoCardless credentials are read from environment variables:
@@ -58,6 +59,7 @@ commands and tests do not need live credentials.
 - `export`: writes normalized transaction CSV
 - `institutions`: lists provider institutions by country
 - `init`: writes a starter config and creates local directories
+- `query`/`sql`: runs read-only local archive SELECT/WITH SQL
 - `status`: shows local archive status
 - `sync`: fetches accounts and transactions for a provider connection
 

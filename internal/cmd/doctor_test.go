@@ -112,6 +112,30 @@ func TestExportWritesDefaultCSV(t *testing.T) {
 	}
 }
 
+func TestQueryPlainOutputsTSV(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "archive.db")
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--db", dbPath, "--plain", "query", "select ';' as separator, 1 as one"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); got != "separator\tone\n;\t1\n" {
+		t.Fatalf("query output = %q", got)
+	}
+}
+
+func TestQueryRejectsWriteSQL(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "archive.db")
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--db", dbPath, "sql", "delete from accounts"}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "only read-only select queries are allowed") {
+		t.Fatalf("Run error = %v, want read-only rejection", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
 func TestInstitutionsRejectsUnsupportedProvider(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	var stdout, stderr bytes.Buffer

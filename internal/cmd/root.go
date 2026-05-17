@@ -30,6 +30,8 @@ type CLI struct {
 	Export       ExportCmd       `cmd:"" help:"Export normalized transactions as CSV."`
 	Institutions InstitutionsCmd `cmd:"" help:"List provider institutions by country."`
 	Init         InitCmd         `cmd:"" help:"Write a starter config and create local directories."`
+	Query        QueryCmd        `cmd:"" help:"Run a read-only SQL query against the local archive."`
+	SQL          SQLCmd          `cmd:"" help:"Alias for query."`
 	Status       StatusCmd       `cmd:"" help:"Show local archive status."`
 	Sync         SyncCmd         `cmd:"" help:"Fetch and archive transactions for a connection."`
 }

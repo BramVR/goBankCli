@@ -31,3 +31,6 @@ CSV exports use this stable header:
 ```csv
 date,value_date,account_id,iban,institution,counterparty_name,counterparty_account,description,amount,currency,transaction_id,provider,category
 ```
+
+Local `query`/`sql` commands allow read-only `SELECT`/`WITH` inspection of this
+schema. Mutating SQL and multiple statements are rejected before execution.

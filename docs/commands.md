@@ -95,3 +95,16 @@ gobankcli export --account ACCOUNT_ID --out -
 
 Exports normalized transaction CSV with a stable header. Without `--out`, the
 file is written to `normalized.csv` inside the configured exports directory.
+
+## query / sql
+
+```bash
+gobankcli query "select count(*) as transactions from transactions"
+gobankcli sql "select booking_date, amount, description from transactions limit 20"
+gobankcli --json query "select provider, count(*) as rows from transactions group by provider"
+```
+
+Runs one read-only `SELECT` or `WITH` statement against the local SQLite archive.
+JSON output contains `columns` plus positional `rows`; default and `--plain`
+output are tab-separated values. Mutating SQL and multiple statements are
+rejected.

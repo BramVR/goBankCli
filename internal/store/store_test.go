@@ -372,6 +372,36 @@ func TestStoreAllowsSameProviderTransactionIDAcrossAccounts(t *testing.T) {
 	}
 }
 
+func TestStoreQueryReadOnlySelect(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	result, err := s.Query(ctx, "select 'ok' as value, 2 as value;")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Columns) != 2 || result.Columns[0] != "value" || result.Columns[1] != "value" || len(result.Rows) != 1 || result.Rows[0][0] != "ok" || result.Rows[0][1] != "2" {
+		t.Fatalf("query result = %+v", result)
+	}
+	empty, err := s.Query(ctx, "select 'x' as value where 0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if empty.Rows == nil || len(empty.Rows) != 0 {
+		t.Fatalf("empty query rows = %#v, want empty non-nil slice", empty.Rows)
+	}
+	if _, err := s.Query(ctx, "insert into accounts(id, provider, provider_account_id, updated_at) values('a','p','pa','now')"); err == nil {
+		t.Fatal("write query should be rejected")
+	}
+	if _, err := s.UpsertAccount(ctx, provider.Account{Provider: "gocardless", ProviderAccountID: "acct_after_query"}); err != nil {
+		t.Fatalf("store should allow writes after query: %v", err)
+	}
+}
+
 func TestListTransactionsForCSVExport(t *testing.T) {
 	ctx := context.Background()
 	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
