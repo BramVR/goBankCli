@@ -1,3 +1,5 @@
+<img src="docs/assets/gobankcli-header.png" alt="gobankcli header" />
+
 # gobankcli
 
 `gobankcli` is a local-first, read-only bank transaction archive. It fetches
