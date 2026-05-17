@@ -198,3 +198,18 @@ func TestInstitutionReportsOmitRawJSON(t *testing.T) {
 		t.Fatalf("institution report missing stable JSON field: %s", got)
 	}
 }
+
+func TestSyncReportSeparatesProviderAndLocalConnectionIDs(t *testing.T) {
+	report := syncReport{
+		ProviderConnectionID: "req_provider",
+		ConnectionID:         "connection_local",
+	}
+	b, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(b)
+	if !strings.Contains(got, `"provider_connection_id":"req_provider"`) || !strings.Contains(got, `"connection_id":"connection_local"`) {
+		t.Fatalf("sync report IDs = %s", got)
+	}
+}

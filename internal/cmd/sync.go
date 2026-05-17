@@ -17,9 +17,10 @@ type SyncCmd struct {
 }
 
 type syncReport struct {
-	ConnectionID     string `json:"connection_id"`
-	Accounts         int    `json:"accounts"`
-	TransactionsSeen int    `json:"transactions_seen"`
+	ProviderConnectionID string `json:"provider_connection_id"`
+	ConnectionID         string `json:"connection_id"`
+	Accounts             int    `json:"accounts"`
+	TransactionsSeen     int    `json:"transactions_seen"`
 }
 
 func (c SyncCmd) Run(ctx context.Context, app *App) error {
@@ -102,7 +103,12 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 			return err
 		}
 	}
-	return app.Out.Write(syncReport{ConnectionID: c.Connection, Accounts: len(accounts), TransactionsSeen: seen})
+	return app.Out.Write(syncReport{
+		ProviderConnectionID: c.Connection,
+		ConnectionID:         localConnectionID,
+		Accounts:             len(accounts),
+		TransactionsSeen:     seen,
+	})
 }
 
 func valueOrZero(t *time.Time) time.Time {

@@ -75,7 +75,9 @@ gobankcli sync --connection REQUISITION_ID --from 2026-01-01 --to 2026-01-31
 
 Fetches accounts and transactions for a provider connection, archives normalized
 transactions, and records one sync run per account. Dates are booking-date
-filters in `YYYY-MM-DD` format.
+filters in `YYYY-MM-DD` format. Machine-readable output reports the provider
+connection as `provider_connection_id` and the archived local ID as
+`connection_id`.
 
 ## status
 
