@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"gobankcli/internal/config"
 	"gobankcli/internal/provider"
 	"gobankcli/internal/store"
 )
@@ -52,22 +53,67 @@ func (c InstitutionsCmd) Run(ctx context.Context, app *App) error {
 	return app.Out.Write(institutionReports(institutions))
 }
 
-func archiveInstitutionByID(ctx context.Context, p provider.Provider, s *store.Store, country string, providerInstitutionID string) error {
+func archiveInstitutionByID(ctx context.Context, p provider.Provider, s *store.Store, countries []string, providerInstitutionID string) error {
 	if providerInstitutionID == "" {
 		return nil
 	}
-	institutions, err := p.ListInstitutions(ctx, country)
+	exists, err := s.HasInstitution(ctx, p.Name(), providerInstitutionID)
 	if err != nil {
 		return err
 	}
-	for _, institution := range institutions {
-		if institution.ProviderInstitutionID != providerInstitutionID {
-			continue
+	if exists {
+		return nil
+	}
+	for _, country := range countries {
+		institutions, err := p.ListInstitutions(ctx, country)
+		if err != nil {
+			return err
 		}
-		_, err := s.UpsertInstitution(ctx, institution)
-		return err
+		for _, institution := range institutions {
+			if institution.ProviderInstitutionID != providerInstitutionID {
+				continue
+			}
+			_, err := s.UpsertInstitution(ctx, institution)
+			return err
+		}
 	}
 	return nil
+}
+
+func institutionArchiveCountries(cfg config.Config, providerName, providerInstitutionID string) []string {
+	var countries []string
+	addCountry := func(country string) {
+		country = strings.ToUpper(strings.TrimSpace(country))
+		if country == "" {
+			return
+		}
+		for _, existing := range countries {
+			if existing == country {
+				return
+			}
+		}
+		countries = append(countries, country)
+	}
+	providerName = strings.ToLower(strings.TrimSpace(providerName))
+	for _, connection := range cfg.Connections {
+		if !sameConfigProvider(connection.Provider, providerName) || strings.TrimSpace(connection.InstitutionID) != providerInstitutionID {
+			continue
+		}
+		addCountry(connection.Country)
+	}
+	addCountry(cfg.DefaultCountry)
+	for _, connection := range cfg.Connections {
+		if !sameConfigProvider(connection.Provider, providerName) {
+			continue
+		}
+		addCountry(connection.Country)
+	}
+	return countries
+}
+
+func sameConfigProvider(configProvider, providerName string) bool {
+	configProvider = strings.ToLower(strings.TrimSpace(configProvider))
+	return configProvider == "" || configProvider == providerName
 }
 
 func filterInstitutions(institutions []provider.Institution, query string) []provider.Institution {

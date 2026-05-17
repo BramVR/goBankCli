@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"gobankcli/internal/provider"
@@ -33,4 +34,16 @@ func (s *Store) institutionID(ctx context.Context, providerName, providerInstitu
 	var id string
 	err := s.db.QueryRowContext(ctx, `select id from institutions where provider = ? and provider_institution_id = ?`, providerName, providerInstitutionID).Scan(&id)
 	return id, err
+}
+
+func (s *Store) HasInstitution(ctx context.Context, providerName, providerInstitutionID string) (bool, error) {
+	var id string
+	err := s.db.QueryRowContext(ctx, `select id from institutions where provider = ? and provider_institution_id = ?`, providerName, providerInstitutionID).Scan(&id)
+	if err == nil {
+		return true, nil
+	}
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return false, err
 }

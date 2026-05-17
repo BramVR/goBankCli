@@ -63,7 +63,8 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 		started := time.Now().UTC()
 		providerAccountID := account.ProviderAccountID
 		if !archivedInstitutions[account.InstitutionID] {
-			if err := archiveInstitutionByID(ctx, p, s, app.Config.DefaultCountry, account.InstitutionID); err != nil {
+			countries := institutionArchiveCountries(app.Config, providerName, account.InstitutionID)
+			if err := archiveInstitutionByID(ctx, p, s, countries, account.InstitutionID); err != nil {
 				return err
 			}
 			archivedInstitutions[account.InstitutionID] = true

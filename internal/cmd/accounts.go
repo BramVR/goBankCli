@@ -53,7 +53,8 @@ func (c AccountsCmd) Run(ctx context.Context, app *App) error {
 	archivedInstitutions := map[string]bool{}
 	for i := range accounts {
 		if !archivedInstitutions[accounts[i].InstitutionID] {
-			if err := archiveInstitutionByID(ctx, p, s, app.Config.DefaultCountry, accounts[i].InstitutionID); err != nil {
+			countries := institutionArchiveCountries(app.Config, providerName, accounts[i].InstitutionID)
+			if err := archiveInstitutionByID(ctx, p, s, countries, accounts[i].InstitutionID); err != nil {
 				return err
 			}
 			archivedInstitutions[accounts[i].InstitutionID] = true

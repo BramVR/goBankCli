@@ -116,7 +116,9 @@ type transactionPayload struct {
 	EntryReference                         string          `json:"entryReference"`
 	EndToEndID                             string          `json:"endToEndId"`
 	BookingDate                            string          `json:"bookingDate"`
+	BookingDateTime                        string          `json:"bookingDateTime"`
 	ValueDate                              string          `json:"valueDate"`
+	ValueDateTime                          string          `json:"valueDateTime"`
 	DebtorName                             string          `json:"debtorName"`
 	CreditorName                           string          `json:"creditorName"`
 	DebtorAccount                          accountRef      `json:"debtorAccount"`

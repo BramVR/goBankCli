@@ -96,6 +96,21 @@ func TestNormalizeTransactionDirectionAndStructuredReference(t *testing.T) {
 	}
 }
 
+func TestNormalizeTransactionUsesDateTimeFallback(t *testing.T) {
+	raw := transactionPayload{
+		BookingDateTime:   "2026-05-17T10:11:12Z",
+		ValueDateTime:     "2026-05-18T00:00:00Z",
+		TransactionAmount: amountPayload{Amount: "-25.00", Currency: "EUR"},
+	}
+	tx, err := NormalizeTransaction("account-1", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tx.BookingDate.Format("2006-01-02") != "2026-05-17" || tx.ValueDate == nil || tx.ValueDate.Format("2006-01-02") != "2026-05-18" {
+		t.Fatalf("datetime fallback dates = booking %s value %v", tx.BookingDate, tx.ValueDate)
+	}
+}
+
 func TestNormalizeTransactionDropsPlaceholderReference(t *testing.T) {
 	raw := transactionPayload{
 		BookingDate:       "2026-05-17",

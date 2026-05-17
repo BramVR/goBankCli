@@ -213,3 +213,18 @@ func TestSyncReportSeparatesProviderAndLocalConnectionIDs(t *testing.T) {
 		t.Fatalf("sync report IDs = %s", got)
 	}
 }
+
+func TestInstitutionArchiveCountriesPreferMatchingConnection(t *testing.T) {
+	cfg := config.Config{
+		DefaultCountry: "BE",
+		Connections: []config.Connection{
+			{Provider: "gocardless", InstitutionID: "BUNQ_NL", Country: "NL"},
+			{Provider: "gocardless", InstitutionID: "OTHER_DE", Country: "DE"},
+		},
+	}
+	got := institutionArchiveCountries(cfg, "gocardless", "BUNQ_NL")
+	want := []string{"NL", "BE", "DE"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("countries = %v, want %v", got, want)
+	}
+}

@@ -72,13 +72,13 @@ func NormalizeTransactions(accountID string, raw transactionsPayload) ([]provide
 }
 
 func NormalizeTransaction(accountID string, raw transactionPayload) (provider.Transaction, error) {
-	bookingDate, err := time.Parse("2006-01-02", raw.BookingDate)
+	bookingDate, err := parseGoCardlessDate(raw.BookingDate, raw.BookingDateTime)
 	if err != nil {
 		return provider.Transaction{}, err
 	}
 	var valueDate *time.Time
-	if raw.ValueDate != "" {
-		parsed, err := time.Parse("2006-01-02", raw.ValueDate)
+	if strings.TrimSpace(raw.ValueDate) != "" || strings.TrimSpace(raw.ValueDateTime) != "" {
+		parsed, err := parseGoCardlessDate(raw.ValueDate, raw.ValueDateTime)
 		if err != nil {
 			return provider.Transaction{}, err
 		}
@@ -101,6 +101,17 @@ func NormalizeTransaction(accountID string, raw transactionPayload) (provider.Tr
 		Reference:             firstReference(raw.EntryReference, raw.EndToEndID, raw.RemittanceInformationStructured, firstStructuredReference(raw.RemittanceInformationStructuredArray)),
 		RawJSON:               copyRaw(raw.Raw),
 	}, nil
+}
+
+func parseGoCardlessDate(dateValue, dateTimeValue string) (time.Time, error) {
+	dateValue = strings.TrimSpace(dateValue)
+	if dateValue == "" {
+		dateTimeValue = strings.TrimSpace(dateTimeValue)
+		if len(dateTimeValue) >= len("2006-01-02") {
+			dateValue = dateTimeValue[:len("2006-01-02")]
+		}
+	}
+	return time.Parse("2006-01-02", dateValue)
 }
 
 func counterparty(raw transactionPayload) (string, string) {
