@@ -3,10 +3,14 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gobankcli/internal/config"
+	"gobankcli/internal/provider"
 )
 
 func TestDoctorJSONMissingCredentials(t *testing.T) {
@@ -105,5 +109,68 @@ func TestExportWritesDefaultCSV(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "rows: 0") {
 		t.Fatalf("export report missing row count:\n%s", stdout.String())
+	}
+}
+
+func TestInstitutionsRejectsUnsupportedProvider(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"institutions", "--provider", "unknown", "--country", "BE"}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "unsupported provider: unknown") {
+		t.Fatalf("Run error = %v, want unsupported provider", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestInstitutionsMissingGoCardlessCredentials(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvGoCardlessSecretID, "")
+	t.Setenv(config.EnvGoCardlessSecretKey, "")
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"institutions", "--country", "BE"}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "gocardless credentials missing") {
+		t.Fatalf("Run error = %v, want missing credentials", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestAccountReportsOmitRawJSON(t *testing.T) {
+	report := accountsReport{Accounts: accountReports([]provider.Account{{
+		ID:                "account_local",
+		Provider:          "gocardless",
+		ProviderAccountID: "account_provider",
+		RawJSON:           []byte(`{"ownerName":"Sensitive"}`),
+	}})}
+	b, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(b)
+	if strings.Contains(got, "RawJSON") || strings.Contains(got, "Sensitive") {
+		t.Fatalf("account report leaked raw JSON: %s", got)
+	}
+}
+
+func TestInstitutionReportsOmitRawJSON(t *testing.T) {
+	report := institutionReports([]provider.Institution{{
+		Provider:              "gocardless",
+		ProviderInstitutionID: "BELFIUS_GKCCBEBB",
+		Name:                  "Belfius",
+		RawJSON:               []byte(`{"logo":"raw"}`),
+	}})
+	b, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(b)
+	if strings.Contains(got, "RawJSON") || strings.Contains(got, "raw") {
+		t.Fatalf("institution report leaked raw JSON: %s", got)
+	}
+	if !strings.Contains(got, "provider_institution_id") {
+		t.Fatalf("institution report missing stable JSON field: %s", got)
 	}
 }

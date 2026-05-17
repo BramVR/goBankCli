@@ -12,6 +12,10 @@ func (s *Store) UpsertAccount(ctx context.Context, account provider.Account) (st
 	if id == "" {
 		id = stableID("account", account.Provider, account.ProviderAccountID)
 	}
+	institutionID := account.InstitutionID
+	if institutionID != "" {
+		institutionID = stableID("institution", account.Provider, institutionID)
+	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, err := s.db.ExecContext(ctx, `
 insert into accounts(id, provider, provider_account_id, institution_id, connection_id, iban, name, currency, owner_name, raw_json, updated_at)
@@ -25,7 +29,7 @@ on conflict(provider, provider_account_id) do update set
 	owner_name=excluded.owner_name,
 	raw_json=excluded.raw_json,
 	updated_at=excluded.updated_at`,
-		id, account.Provider, account.ProviderAccountID, account.InstitutionID, account.ConnectionID, account.IBAN, account.Name, account.Currency, account.OwnerName, account.RawJSON, now)
+		id, account.Provider, account.ProviderAccountID, institutionID, account.ConnectionID, account.IBAN, account.Name, account.Currency, account.OwnerName, account.RawJSON, now)
 	if err != nil {
 		return "", err
 	}

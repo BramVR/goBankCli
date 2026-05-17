@@ -28,8 +28,9 @@ GOBANKCLI_GOCARDLESS_SECRET_KEY
 ```
 
 The provider package contains the live API client plus offline normalization
-tests for institutions, account details, and booked transactions. Pending
-transactions are not archived yet.
+tests for institutions, consent connections, account details, and booked
+transactions. The CLI wires the provider into `institutions`, `connect`,
+`accounts`, and `sync`. Pending transactions are not archived yet.
 
 Without credentials, live GoCardless commands must fail clearly and never fake a
 successful sync.

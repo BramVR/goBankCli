@@ -24,10 +24,14 @@ type Globals struct {
 type CLI struct {
 	Globals
 
-	Doctor DoctorCmd `cmd:"" help:"Check local config, archive, and provider credentials."`
-	Export ExportCmd `cmd:"" help:"Export normalized transactions as CSV."`
-	Init   InitCmd   `cmd:"" help:"Write a starter config and create local directories."`
-	Status StatusCmd `cmd:"" help:"Show local archive status."`
+	Accounts     AccountsCmd     `cmd:"" help:"Fetch and archive accounts for a connection."`
+	Connect      ConnectCmd      `cmd:"" help:"Start a read-only bank consent flow."`
+	Doctor       DoctorCmd       `cmd:"" help:"Check local config, archive, and provider credentials."`
+	Export       ExportCmd       `cmd:"" help:"Export normalized transactions as CSV."`
+	Institutions InstitutionsCmd `cmd:"" help:"List provider institutions by country."`
+	Init         InitCmd         `cmd:"" help:"Write a starter config and create local directories."`
+	Status       StatusCmd       `cmd:"" help:"Show local archive status."`
+	Sync         SyncCmd         `cmd:"" help:"Fetch and archive transactions for a connection."`
 }
 
 type App struct {

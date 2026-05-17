@@ -26,6 +26,10 @@ go run ./cmd/gobankcli --help
 gobankcli init
 gobankcli doctor
 gobankcli --json doctor
+gobankcli institutions --country BE --query belfius
+gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
+gobankcli accounts --connection REQUISITION_ID
+gobankcli sync --connection REQUISITION_ID --from 2026-01-01
 gobankcli status
 gobankcli export
 ```
@@ -48,10 +52,14 @@ commands and tests do not need live credentials.
 
 ## Current Commands
 
+- `accounts`: fetches account metadata for a provider connection
+- `connect`: starts a read-only consent flow and stores the connection
 - `doctor`: checks config paths and GoCardless credential presence
 - `export`: writes normalized transaction CSV
+- `institutions`: lists provider institutions by country
 - `init`: writes a starter config and creates local directories
 - `status`: shows local archive status
+- `sync`: fetches accounts and transactions for a provider connection
 
 Use `--json` for stable JSON and `--plain` for simple key-value output.
 Human hints and warnings go to stderr; requested data goes to stdout.

@@ -35,6 +35,47 @@ gobankcli init --force
 Creates config, database, and export directories. Writes a starter config when
 none exists.
 
+## institutions
+
+```bash
+gobankcli institutions --country BE
+gobankcli institutions --country BE --query belfius
+gobankcli --json institutions --country BE
+```
+
+Lists provider institutions for an ISO country code. `--query` filters by name,
+BIC, or provider institution ID after the provider response is normalized.
+
+## connect
+
+```bash
+gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
+```
+
+Starts a read-only provider consent flow and stores the returned connection in
+the archive. The output includes the provider connection ID and redirect URL.
+
+## accounts
+
+```bash
+gobankcli accounts --connection REQUISITION_ID
+gobankcli --json accounts --connection REQUISITION_ID
+```
+
+Fetches accounts for a provider connection, upserts them into SQLite, and emits
+the normalized account records plus a count.
+
+## sync
+
+```bash
+gobankcli sync --connection REQUISITION_ID
+gobankcli sync --connection REQUISITION_ID --from 2026-01-01 --to 2026-01-31
+```
+
+Fetches accounts and transactions for a provider connection, archives normalized
+transactions, and records one sync run per account. Dates are booking-date
+filters in `YYYY-MM-DD` format.
+
 ## status
 
 ```bash

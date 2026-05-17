@@ -282,6 +282,66 @@ func TestStoreUpsertTransactionReturnsPersistedID(t *testing.T) {
 	}
 }
 
+func TestStoreUpsertConnectionAndSyncRun(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	firstID, err := s.UpsertConnection(ctx, provider.Connection{
+		ID:                   "connection_local",
+		Provider:             "gocardless",
+		ProviderConnectionID: "req_provider",
+		InstitutionID:        "BELFIUS_GKCCBEBB",
+		Status:               "linked",
+		RedirectURL:          "https://example.test/callback",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondID, err := s.UpsertConnection(ctx, provider.Connection{
+		ID:                   "ignored",
+		Provider:             "gocardless",
+		ProviderConnectionID: "req_provider",
+		InstitutionID:        "BELFIUS_GKCCBEBB",
+		Status:               "expired",
+		RedirectURL:          "https://example.test/callback",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstID != "connection_local" || secondID != "connection_local" {
+		t.Fatalf("connection ids = %q, %q; want persisted id", firstID, secondID)
+	}
+
+	finished := time.Date(2026, 5, 17, 13, 0, 0, 0, time.UTC)
+	syncRunID, err := s.InsertSyncRun(ctx, provider.SyncRun{
+		ID:               "sync_local",
+		Provider:         "gocardless",
+		ConnectionID:     firstID,
+		AccountID:        "account_local",
+		StartedAt:        finished.Add(-time.Minute),
+		FinishedAt:       &finished,
+		Status:           "ok",
+		TransactionsSeen: 4,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if syncRunID != "sync_local" {
+		t.Fatalf("sync run id = %q, want sync_local", syncRunID)
+	}
+	status, err := s.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Connections != 1 || status.SyncRuns != 1 {
+		t.Fatalf("status = %+v", status)
+	}
+}
+
 func TestStoreAllowsSameProviderTransactionIDAcrossAccounts(t *testing.T) {
 	ctx := context.Background()
 	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
@@ -320,7 +380,7 @@ func TestListTransactionsForCSVExport(t *testing.T) {
 	}
 	defer s.Close()
 
-	institutionID, err := s.UpsertInstitution(ctx, provider.Institution{
+	_, err = s.UpsertInstitution(ctx, provider.Institution{
 		Provider:              "gocardless",
 		ProviderInstitutionID: "BELFIUS_GKCCBEBB",
 		Name:                  "Belfius",
@@ -332,7 +392,7 @@ func TestListTransactionsForCSVExport(t *testing.T) {
 	accountID, err := s.UpsertAccount(ctx, provider.Account{
 		Provider:          "gocardless",
 		ProviderAccountID: "acct_provider",
-		InstitutionID:     institutionID,
+		InstitutionID:     "BELFIUS_GKCCBEBB",
 		IBAN:              "BE00000000000000",
 		Currency:          "EUR",
 	})
