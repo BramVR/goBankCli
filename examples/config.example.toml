@@ -1,0 +1,6 @@
+default_provider = "gocardless"
+default_country = "BE"
+
+[paths]
+db = "~/.local/share/gobankcli/gobankcli.db"
+exports = "~/Finance/gobankcli/exports"

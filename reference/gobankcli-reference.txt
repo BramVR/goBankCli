@@ -1,0 +1,655 @@
+# gobankcli Product Reference
+
+This document is reference material for implementing `gobankcli`. It is not an exact implementation prompt. Use it to understand the intended product, architecture, safety constraints, command surface, and acceptance criteria.
+
+## Product summary
+
+`gobankcli` is a bank-agnostic, local-first CLI that retrieves read-only bank transaction data through safe providers, stores a normalized private archive in SQLite, and exports stable CSV files for budgeting/accounting.
+
+Build it as a real, maintainable Go CLI in the style of Steipete/OpenClaw tools.
+
+## Core product constraints
+
+- Do not frame the project as v1/v2/v3.
+- Design one stable core that evolves by adding capabilities.
+- Belfius via GoCardless Bank Account Data is the first concrete flow, but the tool must be generic for all banks.
+- Do not build a Belfius-specific tool.
+- Do not implement bank-login scraping, browser automation, session-cookie capture, password storage, reverse-engineered mobile APIs, or private bank endpoints.
+- Do not implement payments or payment initiation.
+- Prefer regulated/read-only rails:
+  - GoCardless Bank Account Data / Nordigen-style PSD2 AIS first.
+  - Later provider possibilities: Ponto, CODA/Codabox/Isabel, manual CSV import.
+- Local-first and private by default.
+- No public web/dashboard/server.
+- No hard-coded secrets.
+- No `float64` for money.
+- CLI must be scriptable and useful from agents, cron, and shell scripts.
+
+## Reference repositories to inspect
+
+Inspect these before implementing:
+
+- `steipete/wacrawl`
+- `openclaw/gogcli`
+- `openclaw/notcrawl`
+- `openclaw/discrawl`
+- `openclaw/gitcrawl`
+- `steipete/eightctl`
+- `steipete/sonoscli`
+- `steipete/gifgrep`
+- `steipete/camsnap`
+
+Use these patterns:
+
+- From `wacrawl`: small local archive CLI, SQLite, `doctor`, `sync`, `status`, read-only archive philosophy.
+- From `gogcli`: `AGENTS.md`, stdout/stderr discipline, `--json`, `--plain`, `--no-input`, Makefile/dev workflow, agent-friendly docs.
+- From `notcrawl`/`discrawl`/`gitcrawl`: local-first crawler/archive shape, SQLite schema, status/metadata/doctor commands, practical README.
+- From `eightctl`/`sonoscli`/`gifgrep`/`camsnap`: concise README sections, command surface docs, configuration docs, behavior notes, scriptable output.
+
+## Recommended technical choices
+
+- Language: Go.
+- CLI parsing: `github.com/alecthomas/kong`.
+- SQLite: `modernc.org/sqlite` preferred, to keep installs simple and pure Go.
+- Config: TOML, likely `github.com/pelletier/go-toml/v2`.
+- Money: safe decimal/string representation; never `float64`.
+- Tests: stdlib `testing`, `httptest` where useful.
+- Keep dependencies minimal.
+
+## Suggested repository layout
+
+```text
+gobankcli/
+  AGENTS.md
+  README.md
+  LICENSE
+  Makefile
+  go.mod
+  go.sum
+
+  cmd/
+    gobankcli/
+      main.go
+
+  internal/
+    cmd/
+      root.go
+      doctor.go
+      init.go
+      institutions.go
+      connect.go
+      accounts.go
+      sync.go
+      status.go
+      export.go
+      sql.go
+
+    config/
+      config.go
+      paths.go
+      secrets.go
+
+    provider/
+      provider.go
+      models.go
+      registry.go
+
+    provider/gocardless/
+      client.go
+      auth.go
+      institutions.go
+      requisitions.go
+      accounts.go
+      transactions.go
+      normalize.go
+      models.go
+
+    store/
+      store.go
+      schema.go
+      migrations.go
+      institutions.go
+      connections.go
+      accounts.go
+      transactions.go
+      sync_runs.go
+      query.go
+
+    export/
+      csv.go
+      normalize.go
+
+    outfmt/
+      outfmt.go
+      json.go
+      plain.go
+
+    errfmt/
+      errfmt.go
+
+  docs/
+    architecture.md
+    configuration.md
+    commands.md
+    providers.md
+    data-model.md
+    security.md
+    examples.md
+    development.md
+
+  examples/
+    config.example.toml
+    exports/
+      normalized.csv
+
+  testdata/
+    gocardless/
+      institutions_be.json
+      accounts.json
+      transactions.json
+```
+
+If a better structure emerges after inspecting the reference repos, use it, but keep these principles:
+
+- clear command layer
+- provider abstraction
+- local SQLite store
+- export layer
+- docs and agent instructions
+
+## Architecture
+
+The permanent spine is:
+
+```text
+read-only provider
+→ normalized internal model
+→ local SQLite archive
+→ export/query layer
+→ CLI/automation
+```
+
+The code should be bank-agnostic from the start.
+
+Core domain models should represent:
+
+- provider
+- institution
+- connection/requisition/consent
+- account
+- transaction
+- sync run
+
+Suggested domain shape:
+
+```go
+type Institution struct {
+    ID                    string
+    Provider              string
+    ProviderInstitutionID string
+    Name                  string
+    Country               string
+    BIC                   string
+    RawJSON               []byte
+}
+
+type Connection struct {
+    ID                   string
+    Provider             string
+    ProviderConnectionID string
+    InstitutionID        string
+    Status               string
+    RedirectURL          string
+    CreatedAt            time.Time
+    UpdatedAt            time.Time
+    ExpiresAt            *time.Time
+    RawJSON              []byte
+}
+
+type Account struct {
+    ID                string
+    Provider          string
+    ProviderAccountID string
+    InstitutionID     string
+    ConnectionID      string
+    IBAN              string
+    Name              string
+    Currency          string
+    OwnerName         string
+    RawJSON           []byte
+}
+
+type Transaction struct {
+    ID                    string
+    Provider              string
+    ProviderTransactionID string
+    AccountID             string
+    BookingDate           time.Time
+    ValueDate             *time.Time
+    Amount                string // decimal string, never float64
+    Currency              string
+    CounterpartyName      string
+    CounterpartyAccount   string
+    Description           string
+    RemittanceInfo        string
+    Reference             string
+    RawJSON               []byte
+}
+```
+
+## Provider abstraction
+
+Create a generic provider interface, roughly:
+
+```go
+type Provider interface {
+    Name() string
+    ListInstitutions(ctx context.Context, country string) ([]Institution, error)
+    StartConnection(ctx context.Context, institutionID string, redirectURL string) (ConnectionSession, error)
+    GetConnection(ctx context.Context, connectionID string) (Connection, error)
+    ListAccounts(ctx context.Context, connectionID string) ([]Account, error)
+    FetchTransactions(ctx context.Context, accountID string, from, to time.Time) ([]Transaction, error)
+}
+```
+
+Create a provider registry so future providers can be added without changing the whole app:
+
+```text
+provider/gocardless
+provider/ponto       later
+provider/coda        later
+provider/manualcsv   later
+```
+
+Only implement GoCardless now, plus clear stubs/docs for future provider types if useful.
+
+## GoCardless behavior
+
+- Use GoCardless Bank Account Data read-only APIs.
+- Support credentials through environment variables:
+  - `GOBANKCLI_GOCARDLESS_SECRET_ID`
+  - `GOBANKCLI_GOCARDLESS_SECRET_KEY`
+- Do not pretend live sync works without credentials.
+- If credentials are absent, `doctor` should report that clearly.
+- Tests should use `testdata/gocardless/*.json`.
+- Normalize GoCardless JSON into the generic models.
+
+## CLI design
+
+Use `kong`.
+
+Global flags:
+
+- `--config PATH`
+- `--db PATH`
+- `--json`
+- `--plain`
+- `--no-input`
+- `--version`
+
+Commands:
+
+- `gobankcli doctor`
+- `gobankcli init`
+- `gobankcli institutions --country BE --query belfius`
+- `gobankcli connect --provider gocardless --institution BELFIUS_GKCCBEBB`
+- `gobankcli accounts`
+- `gobankcli sync`
+- `gobankcli status`
+- `gobankcli export --from YYYY-MM-DD --to YYYY-MM-DD --out PATH`
+- `gobankcli sql "select ..."` or `gobankcli query "select ..."` as read-only local inspection, if easy and safe
+- `gobankcli help <command>`
+
+Command behavior rules:
+
+- stdout is for requested data only.
+- stderr is for human hints, warnings, and progress.
+- `--json` emits stable JSON.
+- `--plain` emits simple parseable output.
+- `--no-input` must never block waiting for user input.
+- Commands must be usable from cron/Hermes.
+- Return non-zero exit codes for real failures.
+- Never print secrets.
+- Never write bank data outside configured paths unless explicitly asked.
+
+## Default paths
+
+Use XDG-style paths where possible:
+
+- config: `~/.config/gobankcli/config.toml`
+- db: `~/.local/share/gobankcli/gobankcli.db`
+- exports: `~/Finance/gobankcli/exports` or configurable
+- cache/temp: `~/.cache/gobankcli`
+
+Document exact paths.
+
+## Config example
+
+```toml
+default_provider = "gocardless"
+default_country = "BE"
+
+[paths]
+db = "~/.local/share/gobankcli/gobankcli.db"
+exports = "~/Finance/gobankcli/exports"
+
+[[connections]]
+name = "Bram Belfius personal"
+provider = "gocardless"
+institution_id = "BELFIUS_GKCCBEBB"
+country = "BE"
+```
+
+## Secrets
+
+- Environment variables first.
+- Optional OS keyring support only if simple.
+- If local secret files are supported, enforce/document restrictive file permissions.
+- Never commit secrets.
+- Never include real-looking secrets in docs.
+
+## SQLite
+
+Implement schema/migrations for:
+
+- institutions
+- connections
+- accounts
+- transactions
+- sync_runs
+
+Store raw JSON for institutions/accounts/transactions/connections where applicable.
+
+Transactions should deduplicate in this order:
+
+1. provider transaction ID
+2. bank reference / end-to-end ID if available
+3. stable hash of provider + account + booking date + amount + currency + counterparty + description
+
+Preserve raw provider JSON.
+
+## Normalized CSV schema
+
+At minimum:
+
+```csv
+date,value_date,account_id,iban,institution,counterparty_name,counterparty_account,description,amount,currency,transaction_id,provider,category
+```
+
+`category` can be empty now, but keep the column so downstream tools get a stable schema.
+
+## Makefile
+
+Create useful targets, in the style of the reference repos:
+
+```make
+build
+test
+fmt
+lint
+ci
+clean
+gobankcli
+```
+
+Allow something like:
+
+```bash
+make gobankcli -- doctor --json
+make gobankcli -- institutions --country BE --query belfius
+```
+
+If that pattern is awkward, at least document the equivalent.
+
+## Testing
+
+Add tests for:
+
+- config path expansion
+- environment-secret detection without printing secrets
+- CSV export formatting
+- transaction deduplication hash stability
+- GoCardless JSON normalization using `testdata`
+- SQLite insert/upsert behavior
+- `doctor --json` output shape
+- command output basics where practical
+
+## Acceptance criteria
+
+- `go test ./...` passes.
+- `make test` passes.
+- `make ci` passes or clearly documents missing optional tools.
+- `go run ./cmd/gobankcli --help` works.
+- `go run ./cmd/gobankcli doctor --json` works without secrets and reports missing credentials cleanly.
+- `go run ./cmd/gobankcli institutions --country BE --query belfius --json` either:
+  - works against GoCardless if credentials are present, or
+  - fails with a clear credential error and no panic.
+- CSV export works from local/test data.
+- README/docs/AGENTS are coherent and current.
+
+## Required docs
+
+Create practical docs in the style of Steipete/OpenClaw CLI repos.
+
+### `README.md`
+
+Include:
+
+- concise description
+- safety stance:
+  - read-only
+  - no scraping
+  - no payment initiation
+  - no bank password storage
+- install/build instructions
+- quickstart
+- command surface
+- example Belfius/Belgian flow via GoCardless
+- CSV export example
+- automation/cron example
+- configuration summary
+- limitations
+- security notes
+- tooling/development summary
+
+Style:
+
+- practical
+- operational
+- copy-paste commands
+- no marketing fluff
+
+### `AGENTS.md`
+
+Make this similar in spirit to `gogcli`’s `AGENTS.md`.
+
+Include:
+
+- repository purpose
+- project structure
+- important packages/directories
+- build/test/lint commands
+- CLI behavior rules
+- stdout/stderr rules
+- security rules
+- data privacy rules
+- how to add a provider
+- how to add a command
+- how to update docs
+- testing expectations
+- commit guidance
+- what not to do:
+  - no scraping
+  - no payment initiation
+  - no hard-coded credentials
+  - no public dashboard/server by default
+  - no float money
+  - no real bank data in tests
+  - no printing secrets
+
+Expected workflow for agents:
+
+- inspect before editing
+- keep changes narrow
+- add/update tests
+- run `go test ./...`
+- run `make ci` when available
+- update docs when CLI behavior changes
+- report what was changed and verified
+
+### `docs/architecture.md`
+
+Explain:
+
+- provider/archive/export spine
+- bank-agnostic design
+- why SQLite
+- why raw JSON is preserved
+- provider interface
+- store/export boundaries
+- “evolution by capabilities”, explicitly not hard v1/v2 splits
+
+### `docs/configuration.md`
+
+Explain:
+
+- config paths
+- env vars
+- example config
+- secrets handling
+- export paths
+- headless/cron mode
+
+### `docs/commands.md`
+
+Full command reference with examples:
+
+- global flags
+- `doctor`
+- `init`
+- `institutions`
+- `connect`
+- `accounts`
+- `sync`
+- `status`
+- `export`
+- `sql/query` if implemented
+
+### `docs/providers.md`
+
+Explain:
+
+- provider model
+- GoCardless provider
+- expected consent renewal
+- future provider types:
+  - Ponto
+  - CODA/Codabox/Isabel
+  - manual CSV importer
+- what adding a provider requires
+
+### `docs/data-model.md`
+
+Explain:
+
+- tables
+- normalized transaction fields
+- raw JSON storage
+- deduplication strategy
+- stable CSV schema
+
+### `docs/security.md`
+
+Clearly document:
+
+- read-only AIS
+- no payment initiation
+- no bank password storage
+- token handling
+- local file permissions
+- raw bank data privacy
+- consent renewal
+- why scraping is intentionally not supported
+
+### `docs/examples.md`
+
+Include flows:
+
+- first-time setup
+- find Belfius
+- connect a bank
+- sync
+- export all accounts
+- export one account
+- cron example
+- JSON output example
+- plain output example
+
+### `docs/development.md`
+
+Include:
+
+- build/test/lint commands
+- dependency choices
+- command generation/docs update process if any
+- testdata rules
+- release notes if useful
+
+Optional but good:
+
+- If practical, add generated command docs under `docs/commands/`.
+- If generating docs is too much now, make `docs/commands.md` manually complete and keep the architecture ready for generated docs later.
+
+## Implementation process
+
+Work incrementally and commit after verified steps.
+
+Suggested step sequence:
+
+1. Inspect the listed reference repos.
+2. Create repository skeleton.
+3. Add Go module.
+4. Add CLI root with `kong`.
+5. Add config and paths.
+6. Add provider models/interface/registry.
+7. Add SQLite store with migrations/schema.
+8. Add CSV export.
+9. Add GoCardless provider structure and testdata normalization.
+10. Add commands:
+    - `doctor`
+    - `init`
+    - `institutions`
+    - `accounts`
+    - `sync`
+    - `status`
+    - `export`
+11. Add tests.
+12. Add docs and `AGENTS.md`.
+13. Run tests.
+14. Report exactly:
+    - what works
+    - what is stubbed
+    - what needs real GoCardless credentials
+    - how to verify live Belfius support safely
+
+For each implementation step:
+
+- inspect relevant existing code first
+- make a narrow change
+- run formatting/tests/checks that apply
+- fix failures before continuing
+- update docs if behavior changed
+- commit the verified step to git with a clear message
+
+## Tone and style
+
+- concise
+- practical
+- operational
+- no hype
+- no fake success
+- safety over cleverness
+- generic bank support from the start
+- continuous evolution, no hard version-phase split
+
+Do not stop at a design document only. Create actual repository files unless blocked by missing credentials. Credentials are only needed for live GoCardless verification, not for core implementation or tests.
