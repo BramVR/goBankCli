@@ -251,6 +251,96 @@ func TestStoreUpsertAccountReturnsPersistedID(t *testing.T) {
 	}
 }
 
+func TestStoreUpsertAccountKeepsStableIDAndUpdatesResourceID(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	firstID, err := s.UpsertAccount(ctx, provider.Account{
+		Provider:           "enablebanking",
+		ProviderAccountID:  "stable-hash",
+		ProviderResourceID: "session-uid-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondID, err := s.UpsertAccount(ctx, provider.Account{
+		Provider:           "enablebanking",
+		ProviderAccountID:  "stable-hash",
+		ProviderResourceID: "session-uid-2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstID != secondID {
+		t.Fatalf("ids = %q, %q; want same stable account", firstID, secondID)
+	}
+	var resourceID string
+	if err := s.db.QueryRowContext(ctx, `select provider_resource_id from accounts where id = ?`, firstID).Scan(&resourceID); err != nil {
+		t.Fatal(err)
+	}
+	if resourceID != "session-uid-2" {
+		t.Fatalf("provider_resource_id = %q, want latest session UID", resourceID)
+	}
+}
+
+func TestStoreMigratesV1AccountsProviderResourceID(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "gobankcli.db")
+	db, err := sql.Open("sqlite", sqliteDSN(dbPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(ctx, `
+create table accounts (
+	id text primary key,
+	provider text not null,
+	provider_account_id text not null,
+	institution_id text,
+	connection_id text,
+	iban text,
+	name text,
+	currency text,
+	owner_name text,
+	raw_json blob,
+	updated_at text not null,
+	unique(provider, provider_account_id)
+);
+insert into accounts(id, provider, provider_account_id, updated_at)
+values('account-local', 'gocardless', 'account-provider', '2026-05-17T00:00:00Z');
+pragma user_version = 1;
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Open(ctx, dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	var resourceID string
+	if err := s.db.QueryRowContext(ctx, `select provider_resource_id from accounts where id = 'account-local'`).Scan(&resourceID); err != nil {
+		t.Fatal(err)
+	}
+	if resourceID != "account-provider" {
+		t.Fatalf("provider_resource_id = %q, want provider account id", resourceID)
+	}
+	var version int
+	if err := s.db.QueryRowContext(ctx, "pragma user_version").Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	if version != schemaVersion {
+		t.Fatalf("schema version = %d, want %d", version, schemaVersion)
+	}
+}
+
 func TestStoreUpsertTransactionReturnsPersistedID(t *testing.T) {
 	ctx := context.Background()
 	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))

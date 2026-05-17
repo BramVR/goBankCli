@@ -111,10 +111,48 @@ func (s *Store) migrate(ctx context.Context) error {
 	if _, err := s.db.ExecContext(ctx, schemaSQL); err != nil {
 		return fmt.Errorf("migrate schema: %w", err)
 	}
+	if currentVersion < 2 {
+		if err := s.addColumnIfMissing(ctx, "accounts", "provider_resource_id", "text"); err != nil {
+			return err
+		}
+		if _, err := s.db.ExecContext(ctx, `
+update accounts
+set provider_resource_id = provider_account_id
+where provider_resource_id is null or provider_resource_id = ''`); err != nil {
+			return fmt.Errorf("backfill account provider resource ids: %w", err)
+		}
+	}
 	if currentVersion < schemaVersion {
 		if _, err := s.db.ExecContext(ctx, fmt.Sprintf("pragma user_version = %d", schemaVersion)); err != nil {
 			return fmt.Errorf("set schema version: %w", err)
 		}
+	}
+	return nil
+}
+
+func (s *Store) addColumnIfMissing(ctx context.Context, table, column, definition string) error {
+	rows, err := s.db.QueryContext(ctx, "pragma table_info("+table+")")
+	if err != nil {
+		return fmt.Errorf("inspect %s schema: %w", table, err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notNull, pk int
+		var defaultValue any
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultValue, &pk); err != nil {
+			return fmt.Errorf("scan %s schema: %w", table, err)
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read %s schema: %w", table, err)
+	}
+	if _, err := s.db.ExecContext(ctx, "alter table "+table+" add column "+column+" "+definition); err != nil {
+		return fmt.Errorf("add %s.%s: %w", table, column, err)
 	}
 	return nil
 }

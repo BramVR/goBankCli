@@ -61,7 +61,10 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 	archivedInstitutions := map[string]bool{}
 	for _, account := range accounts {
 		started := time.Now().UTC()
-		providerAccountID := account.ProviderAccountID
+		providerResourceID := account.ProviderResourceID
+		if providerResourceID == "" {
+			providerResourceID = account.ProviderAccountID
+		}
 		if !archivedInstitutions[account.InstitutionID] {
 			countries := institutionArchiveCountries(app.Config, providerName, account.InstitutionID)
 			if err := archiveInstitutionByID(ctx, p, s, countries, account.InstitutionID); err != nil {
@@ -74,7 +77,7 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 		if err != nil {
 			return err
 		}
-		transactions, err := p.FetchTransactions(ctx, providerAccountID, valueOrZero(from), valueOrZero(to))
+		transactions, err := p.FetchTransactions(ctx, providerResourceID, valueOrZero(from), valueOrZero(to))
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,6 @@
 package store
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 const schemaSQL = `
 create table if not exists institutions (
@@ -33,6 +33,7 @@ create table if not exists accounts (
 	id text primary key,
 	provider text not null,
 	provider_account_id text not null,
+	provider_resource_id text,
 	institution_id text,
 	connection_id text,
 	iban text,

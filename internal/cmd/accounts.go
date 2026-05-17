@@ -19,15 +19,16 @@ type accountsReport struct {
 }
 
 type accountReport struct {
-	ID                string `json:"id"`
-	Provider          string `json:"provider"`
-	ProviderAccountID string `json:"provider_account_id"`
-	InstitutionID     string `json:"institution_id"`
-	ConnectionID      string `json:"connection_id"`
-	IBAN              string `json:"iban"`
-	Name              string `json:"name"`
-	Currency          string `json:"currency"`
-	OwnerName         string `json:"owner_name"`
+	ID                 string `json:"id"`
+	Provider           string `json:"provider"`
+	ProviderAccountID  string `json:"provider_account_id"`
+	ProviderResourceID string `json:"provider_resource_id"`
+	InstitutionID      string `json:"institution_id"`
+	ConnectionID       string `json:"connection_id"`
+	IBAN               string `json:"iban"`
+	Name               string `json:"name"`
+	Currency           string `json:"currency"`
+	OwnerName          string `json:"owner_name"`
 }
 
 func (c AccountsCmd) Run(ctx context.Context, app *App) error {
@@ -73,15 +74,16 @@ func accountReports(accounts []provider.Account) []accountReport {
 	reports := make([]accountReport, 0, len(accounts))
 	for _, account := range accounts {
 		reports = append(reports, accountReport{
-			ID:                account.ID,
-			Provider:          account.Provider,
-			ProviderAccountID: account.ProviderAccountID,
-			InstitutionID:     account.InstitutionID,
-			ConnectionID:      account.ConnectionID,
-			IBAN:              account.IBAN,
-			Name:              account.Name,
-			Currency:          account.Currency,
-			OwnerName:         account.OwnerName,
+			ID:                 account.ID,
+			Provider:           account.Provider,
+			ProviderAccountID:  account.ProviderAccountID,
+			ProviderResourceID: account.ProviderResourceID,
+			InstitutionID:      account.InstitutionID,
+			ConnectionID:       account.ConnectionID,
+			IBAN:               account.IBAN,
+			Name:               account.Name,
+			Currency:           account.Currency,
+			OwnerName:          account.OwnerName,
 		})
 	}
 	return reports

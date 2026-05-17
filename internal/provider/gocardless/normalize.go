@@ -47,15 +47,16 @@ func NormalizeConnection(raw requisitionPayload) provider.Connection {
 func NormalizeAccountDetails(accountID, institutionID, connectionID string, raw accountDetailsPayload) provider.Account {
 	name := firstNonEmpty(raw.Account.DisplayName, raw.Account.Name)
 	return provider.Account{
-		Provider:          Name,
-		ProviderAccountID: accountID,
-		InstitutionID:     institutionID,
-		ConnectionID:      connectionID,
-		IBAN:              raw.Account.IBAN,
-		Name:              name,
-		Currency:          raw.Account.Currency,
-		OwnerName:         raw.Account.OwnerName,
-		RawJSON:           copyRaw(raw.Raw),
+		Provider:           Name,
+		ProviderAccountID:  accountID,
+		ProviderResourceID: accountID,
+		InstitutionID:      institutionID,
+		ConnectionID:       connectionID,
+		IBAN:               raw.Account.IBAN,
+		Name:               name,
+		Currency:           raw.Account.Currency,
+		OwnerName:          raw.Account.OwnerName,
+		RawJSON:            copyRaw(raw.Raw),
 	}
 }
 

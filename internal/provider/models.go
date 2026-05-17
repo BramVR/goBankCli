@@ -31,16 +31,17 @@ type ConnectionSession struct {
 }
 
 type Account struct {
-	ID                string
-	Provider          string
-	ProviderAccountID string
-	InstitutionID     string
-	ConnectionID      string
-	IBAN              string
-	Name              string
-	Currency          string
-	OwnerName         string
-	RawJSON           []byte
+	ID                 string
+	Provider           string
+	ProviderAccountID  string
+	ProviderResourceID string
+	InstitutionID      string
+	ConnectionID       string
+	IBAN               string
+	Name               string
+	Currency           string
+	OwnerName          string
+	RawJSON            []byte
 }
 
 type Transaction struct {
