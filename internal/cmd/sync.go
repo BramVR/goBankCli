@@ -57,9 +57,16 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 
 	seen := 0
 	localConnectionID := store.LocalConnectionID(providerName, c.Connection)
+	archivedInstitutions := map[string]bool{}
 	for _, account := range accounts {
 		started := time.Now().UTC()
 		providerAccountID := account.ProviderAccountID
+		if !archivedInstitutions[account.InstitutionID] {
+			if err := archiveInstitutionByID(ctx, p, s, app.Config.DefaultCountry, account.InstitutionID); err != nil {
+				return err
+			}
+			archivedInstitutions[account.InstitutionID] = true
+		}
 		account.ConnectionID = localConnectionID
 		localID, err := s.UpsertAccount(ctx, account)
 		if err != nil {
@@ -69,10 +76,15 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 		if err != nil {
 			return err
 		}
+		newCount := 0
 		for _, tx := range transactions {
 			tx.AccountID = localID
-			if _, err := s.UpsertTransaction(ctx, tx); err != nil {
+			result, err := s.UpsertTransactionResult(ctx, tx)
+			if err != nil {
 				return err
+			}
+			if result.Inserted {
+				newCount++
 			}
 			seen++
 		}
@@ -84,6 +96,7 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 			StartedAt:        started,
 			FinishedAt:       &finished,
 			Status:           "ok",
+			TransactionsNew:  int64(newCount),
 			TransactionsSeen: int64(len(transactions)),
 		}); err != nil {
 			return err

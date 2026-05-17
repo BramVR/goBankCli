@@ -2,11 +2,17 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"time"
 
 	"gobankcli/internal/provider"
 )
+
+type TransactionUpsertResult struct {
+	ID       string
+	Inserted bool
+}
 
 func TransactionDedupeKey(tx provider.Transaction) string {
 	switch {
@@ -31,16 +37,28 @@ func TransactionDedupeKey(tx provider.Transaction) string {
 }
 
 func (s *Store) UpsertTransaction(ctx context.Context, tx provider.Transaction) (string, error) {
+	result, err := s.UpsertTransactionResult(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	return result.ID, nil
+}
+
+func (s *Store) UpsertTransactionResult(ctx context.Context, tx provider.Transaction) (TransactionUpsertResult, error) {
 	dedupeKey := TransactionDedupeKey(tx)
 	id := tx.ID
 	if id == "" {
 		id = stableID("transaction", dedupeKey)
 	}
+	inserted, err := s.transactionMissing(ctx, dedupeKey)
+	if err != nil {
+		return TransactionUpsertResult{}, err
+	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	bookingDate := tx.BookingDate.Format("2006-01-02")
 	valueDate := dateString(tx.ValueDate)
 
-	_, err := s.db.ExecContext(ctx, `
+	_, err = s.db.ExecContext(ctx, `
 insert into transactions(id, dedupe_key, provider, provider_transaction_id, account_id, booking_date, value_date, amount, currency, counterparty_name, counterparty_account, description, remittance_info, reference, raw_json, created_at, updated_at)
 values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 on conflict(dedupe_key) do update set
@@ -58,9 +76,13 @@ on conflict(dedupe_key) do update set
 	updated_at=excluded.updated_at`,
 		id, dedupeKey, tx.Provider, tx.ProviderTransactionID, tx.AccountID, bookingDate, valueDate, tx.Amount, tx.Currency, tx.CounterpartyName, tx.CounterpartyAccount, tx.Description, tx.RemittanceInfo, tx.Reference, tx.RawJSON, now, now)
 	if err != nil {
-		return "", err
+		return TransactionUpsertResult{}, err
 	}
-	return s.transactionID(ctx, dedupeKey)
+	persistedID, err := s.transactionID(ctx, dedupeKey)
+	if err != nil {
+		return TransactionUpsertResult{}, err
+	}
+	return TransactionUpsertResult{ID: persistedID, Inserted: inserted}, nil
 }
 
 func dateString(t *time.Time) string {
@@ -74,4 +96,16 @@ func (s *Store) transactionID(ctx context.Context, dedupeKey string) (string, er
 	var id string
 	err := s.db.QueryRowContext(ctx, `select id from transactions where dedupe_key = ?`, dedupeKey).Scan(&id)
 	return id, err
+}
+
+func (s *Store) transactionMissing(ctx context.Context, dedupeKey string) (bool, error) {
+	var id string
+	err := s.db.QueryRowContext(ctx, `select id from transactions where dedupe_key = ?`, dedupeKey).Scan(&id)
+	if err == nil {
+		return false, nil
+	}
+	if err == sql.ErrNoRows {
+		return true, nil
+	}
+	return false, err
 }

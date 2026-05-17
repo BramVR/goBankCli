@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gobankcli/internal/provider"
+	"gobankcli/internal/store"
 )
 
 type InstitutionsCmd struct {
@@ -33,10 +34,40 @@ func (c InstitutionsCmd) Run(ctx context.Context, app *App) error {
 	if err != nil {
 		return err
 	}
+	s, err := store.Open(ctx, app.Config.Paths.DB)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	for i := range institutions {
+		id, err := s.UpsertInstitution(ctx, institutions[i])
+		if err != nil {
+			return err
+		}
+		institutions[i].ID = id
+	}
 	if c.Query != "" {
 		institutions = filterInstitutions(institutions, c.Query)
 	}
 	return app.Out.Write(institutionReports(institutions))
+}
+
+func archiveInstitutionByID(ctx context.Context, p provider.Provider, s *store.Store, country string, providerInstitutionID string) error {
+	if providerInstitutionID == "" {
+		return nil
+	}
+	institutions, err := p.ListInstitutions(ctx, country)
+	if err != nil {
+		return err
+	}
+	for _, institution := range institutions {
+		if institution.ProviderInstitutionID != providerInstitutionID {
+			continue
+		}
+		_, err := s.UpsertInstitution(ctx, institution)
+		return err
+	}
+	return nil
 }
 
 func filterInstitutions(institutions []provider.Institution, query string) []provider.Institution {

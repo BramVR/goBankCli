@@ -43,8 +43,9 @@ gobankcli institutions --country BE --query belfius
 gobankcli --json institutions --country BE
 ```
 
-Lists provider institutions for an ISO country code. `--query` filters by name,
-BIC, or provider institution ID after the provider response is normalized.
+Lists provider institutions for an ISO country code and archives the returned
+institution metadata locally. `--query` filters by name, BIC, or provider
+institution ID after the provider response is normalized.
 
 ## connect
 

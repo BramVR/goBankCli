@@ -50,7 +50,14 @@ func (c AccountsCmd) Run(ctx context.Context, app *App) error {
 	}
 	defer s.Close()
 	localConnectionID := store.LocalConnectionID(providerName, c.Connection)
+	archivedInstitutions := map[string]bool{}
 	for i := range accounts {
+		if !archivedInstitutions[accounts[i].InstitutionID] {
+			if err := archiveInstitutionByID(ctx, p, s, app.Config.DefaultCountry, accounts[i].InstitutionID); err != nil {
+				return err
+			}
+			archivedInstitutions[accounts[i].InstitutionID] = true
+		}
 		accounts[i].ConnectionID = localConnectionID
 		id, err := s.UpsertAccount(ctx, accounts[i])
 		if err != nil {

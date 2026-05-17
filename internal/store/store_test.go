@@ -268,17 +268,20 @@ func TestStoreUpsertTransactionReturnsPersistedID(t *testing.T) {
 		Amount:                "42.00",
 		Currency:              "EUR",
 	}
-	firstID, err := s.UpsertTransaction(ctx, tx)
+	first, err := s.UpsertTransactionResult(ctx, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	tx.ID = "ignored"
-	secondID, err := s.UpsertTransaction(ctx, tx)
+	second, err := s.UpsertTransactionResult(ctx, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if firstID != "stored" || secondID != "stored" {
-		t.Fatalf("ids = %q, %q; want persisted id", firstID, secondID)
+	if first.ID != "stored" || second.ID != "stored" {
+		t.Fatalf("ids = %q, %q; want persisted id", first.ID, second.ID)
+	}
+	if !first.Inserted || second.Inserted {
+		t.Fatalf("inserted flags = %v, %v; want true, false", first.Inserted, second.Inserted)
 	}
 }
 
