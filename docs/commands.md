@@ -22,8 +22,8 @@ gobankcli doctor
 gobankcli --json doctor
 ```
 
-Checks config paths and whether GoCardless credentials are present. It reports
-only `set` or `missing`, never secret values.
+Checks config paths and whether provider credentials are present. It reports
+only `set`, `missing`, or `default`, never secret values.
 
 ## init
 
@@ -51,10 +51,26 @@ institution ID after the provider response is normalized.
 
 ```bash
 gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
+gobankcli connect --provider enablebanking --institution BE:Belfius --redirect https://example.test/callback
 ```
 
 Starts a read-only provider consent flow and stores the returned connection in
 the archive. The output includes the provider connection ID and redirect URL.
+
+For Enable Banking, the provider connection ID from this command is the pending
+callback `state`.
+
+## authorize
+
+```bash
+gobankcli authorize --provider enablebanking --url "https://example.test/callback?code=CODE&state=STATE" --institution BE:Belfius
+gobankcli authorize --provider enablebanking --code CODE --state STATE --institution BE:Belfius
+```
+
+Exchanges an Enable Banking callback code for a usable session connection and
+archives returned accounts. `state` must match a pending connection created by
+`connect`. `--institution` is required when the provider response omits ASPSP
+metadata.
 
 ## accounts
 
@@ -65,6 +81,9 @@ gobankcli --json accounts --connection REQUISITION_ID
 
 Fetches accounts for a provider connection, upserts them into SQLite, and emits
 the normalized account records plus a count.
+
+Enable Banking account listing uses archived accounts when the live session
+response only contains provider UIDs.
 
 ## sync
 
@@ -78,6 +97,9 @@ transactions, and records one sync run per account. Dates are booking-date
 filters in `YYYY-MM-DD` format. Machine-readable output reports the provider
 connection as `provider_connection_id` and the archived local ID as
 `connection_id`.
+
+For Enable Banking, use the session ID returned by `authorize` as
+`--connection`.
 
 ## status
 

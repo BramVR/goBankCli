@@ -12,12 +12,18 @@ Core tables:
 
 - `institutions`: provider institution IDs, names, countries, BICs, raw JSON.
 - `connections`: read-only consent/requisition state and expiry metadata.
-- `accounts`: provider account IDs, IBAN/name/currency/owner metadata.
+- `accounts`: stable provider account IDs, current provider resource IDs,
+  IBAN/name/currency/owner metadata.
 - `transactions`: normalized transaction fields and raw provider payloads.
 - `sync_runs`: sync attempts, status, errors, and transaction counters.
 
 Transaction amounts are text decimal strings. Do not store or compute money with
 `float64`.
+
+`provider_account_id` is the stable archive identity. `provider_resource_id` is
+the current live fetch identifier when a provider separates stable account
+identity from session-scoped resource IDs. Enable Banking uses
+`identification_hash` for the stable ID and `uid` as the resource ID.
 
 Transaction deduplication order:
 

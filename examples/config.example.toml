@@ -10,3 +10,9 @@ name = "Belfius personal"
 provider = "gocardless"
 institution_id = "BELFIUS_GKCCBEBB"
 country = "BE"
+
+[[connections]]
+name = "Belfius personal via Enable Banking"
+provider = "enablebanking"
+institution_id = "BE:Belfius"
+country = "BE"

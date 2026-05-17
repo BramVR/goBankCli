@@ -21,14 +21,23 @@ export GOBANKCLI_GOCARDLESS_SECRET_ID="..."
 export GOBANKCLI_GOCARDLESS_SECRET_KEY="..."
 ```
 
+Or set Enable Banking credentials:
+
+```bash
+export GOBANKCLI_ENABLEBANKING_APP_ID="..."
+export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
+```
+
 ## Find Belfius
 
 ```bash
 gobankcli institutions --country BE --query belfius
 gobankcli --json institutions --country BE --query belfius
+gobankcli institutions --provider enablebanking --country BE --query belfius
 ```
 
-Without credentials, this fails with `gocardless credentials missing`.
+Without credentials, live provider commands fail with a provider-specific
+missing credentials error.
 
 ## Connect A Bank
 
@@ -41,11 +50,28 @@ gobankcli connect \
 Open the returned redirect URL, finish consent with the provider, then use the
 returned provider connection ID for account and sync commands.
 
+For Enable Banking, exchange the callback URL first:
+
+```bash
+gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --redirect https://example.test/callback
+
+gobankcli authorize \
+  --provider enablebanking \
+  --url "https://example.test/callback?code=CODE&state=STATE" \
+  --institution BE:Belfius
+```
+
+Use the returned session ID for account and sync commands.
+
 ## Sync
 
 ```bash
 gobankcli accounts --connection REQUISITION_ID
 gobankcli sync --connection REQUISITION_ID --from 2026-01-01
+gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
 gobankcli status
 ```
 

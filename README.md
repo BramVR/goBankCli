@@ -20,6 +20,7 @@ It is built for terminals, shell scripts, cron, and coding agents:
 
 - generic provider abstraction
 - GoCardless Bank Account Data provider
+- Enable Banking AIS provider
 - institutions, consent connections, accounts, booked transactions, sync runs
 - local SQLite archive with raw provider JSON preserved
 - normalized transaction CSV export
@@ -56,10 +57,11 @@ gobankcli doctor
 gobankcli --json doctor
 ```
 
-Find Belfius in the GoCardless institution list:
+Find Belfius in a provider institution list:
 
 ```bash
 gobankcli institutions --country BE --query belfius
+gobankcli institutions --provider enablebanking --country BE --query belfius
 ```
 
 Sync after a GoCardless consent exists:
@@ -151,6 +153,63 @@ If credentials are missing, live provider commands fail with
 `gocardless credentials missing`. Local archive commands such as `status`,
 `export`, and `query` do not need live credentials.
 
+## Enable Banking / Belfius Setup
+
+This assumes an Enable Banking application with read-only account information
+access, a registered redirect URL, application ID, and downloaded RSA private
+key.
+
+1. Set credentials:
+
+```bash
+export GOBANKCLI_ENABLEBANKING_APP_ID="..."
+export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
+```
+
+Optional API override:
+
+```bash
+export GOBANKCLI_ENABLEBANKING_API="https://api.enablebanking.com"
+```
+
+2. Find Belfius:
+
+```bash
+gobankcli institutions --provider enablebanking --country BE --query belfius
+```
+
+Enable Banking institution IDs use `COUNTRY:Name`, for example `BE:Belfius`.
+
+3. Start authorization:
+
+```bash
+gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --redirect https://example.test/callback
+```
+
+Open `redirect_url`, complete the bank flow, then copy the full callback URL.
+
+4. Exchange the callback:
+
+```bash
+gobankcli authorize \
+  --provider enablebanking \
+  --url "https://example.test/callback?code=CODE&state=STATE" \
+  --institution BE:Belfius
+```
+
+`state` must match the pending connection created by `connect`. The
+`--institution` flag is needed when the provider session response omits ASPSP
+metadata.
+
+5. Sync:
+
+```bash
+gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
+```
+
 ## Output And Automation
 
 Use `--json` for structured output:
@@ -208,6 +267,12 @@ name = "Belfius personal"
 provider = "gocardless"
 institution_id = "BELFIUS_GKCCBEBB"
 country = "BE"
+
+[[connections]]
+name = "Belfius personal via Enable Banking"
+provider = "enablebanking"
+institution_id = "BE:Belfius"
+country = "BE"
 ```
 
 ## Commands
@@ -217,6 +282,7 @@ gobankcli doctor
 gobankcli init
 gobankcli institutions --country BE --query belfius
 gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
+gobankcli authorize --provider enablebanking --url "https://example.test/callback?code=CODE&state=STATE" --institution BE:Belfius
 gobankcli accounts --connection PROVIDER_CONNECTION_ID
 gobankcli sync --connection PROVIDER_CONNECTION_ID --from 2026-01-01
 gobankcli status
@@ -268,9 +334,9 @@ Docs:
 
 ## Known Gaps
 
-- Live GoCardless/Belfius flow requires real credentials and consent.
+- Live GoCardless or Enable Banking flows require real credentials and consent.
 - Pending transactions are not archived yet.
 - `category` is present in the CSV schema but currently empty.
-- Future providers are not implemented yet: Ponto, CODA/Codabox/Isabel, manual
-  CSV import.
+- Future providers are not implemented yet: Ponto, CODA/Codabox/Isabel,
+  manual CSV import.
 - No Homebrew/release packaging yet.

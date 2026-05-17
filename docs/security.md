@@ -13,6 +13,7 @@ requested.
 ## Supported
 
 - GoCardless Bank Account Data read-only access.
+- Enable Banking AIS read-only access.
 - Local SQLite archive with private file permissions.
 - Normalized CSV export to configured paths or explicit `--out` paths.
 - Environment-variable credentials for provider API access.
@@ -35,8 +36,17 @@ GOBANKCLI_GOCARDLESS_SECRET_ID
 GOBANKCLI_GOCARDLESS_SECRET_KEY
 ```
 
-`doctor` reports only `set` or `missing`. Config files never contain provider
-secrets, and docs/tests must not include real-looking credentials.
+Enable Banking credentials come from:
+
+```bash
+GOBANKCLI_ENABLEBANKING_APP_ID
+GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH
+GOBANKCLI_ENABLEBANKING_API
+```
+
+`doctor` reports only `set`, `missing`, or `default`. Config files never
+contain provider secrets, and docs/tests must not include real-looking
+credentials.
 
 ## Local Data
 
@@ -57,6 +67,8 @@ payloads unless a local read-only SQL query explicitly selects them.
 
 ## Consent Renewal
 
-GoCardless consents can expire or be revoked. Renewal should use the provider
-consent flow again through `connect`, then `accounts` and `sync`. The CLI must
-not fake successful live syncs when credentials or valid consent are missing.
+Provider consents can expire or be revoked. Renewal should use the provider
+consent flow again through `connect`, then provider-specific completion
+commands such as Enable Banking `authorize`, then `accounts` or `sync`. The CLI
+must not fake successful live syncs when credentials or valid consent are
+missing.
