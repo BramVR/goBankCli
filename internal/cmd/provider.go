@@ -6,6 +6,7 @@ import (
 
 	"gobankcli/internal/config"
 	"gobankcli/internal/provider"
+	"gobankcli/internal/provider/enablebanking"
 	"gobankcli/internal/provider/gocardless"
 )
 
@@ -17,6 +18,15 @@ func newProvider(name string) (provider.Provider, error) {
 			Credentials: map[string]string{
 				gocardless.CredentialSecretID:  creds.SecretID,
 				gocardless.CredentialSecretKey: creds.SecretKey,
+			},
+		})
+	case enablebanking.Name:
+		creds := config.EnableBankingCredentialsFromEnv()
+		return enablebanking.New(provider.Config{
+			BaseURL: creds.API,
+			Credentials: map[string]string{
+				enablebanking.CredentialApplicationID: creds.ApplicationID,
+				enablebanking.CredentialPrivateKey:    creds.PrivateKeyPath,
 			},
 		})
 	default:

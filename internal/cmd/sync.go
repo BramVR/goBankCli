@@ -45,16 +45,16 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 		return err
 	}
 	providerName = p.Name()
-	accounts, err := p.ListAccounts(ctx, c.Connection)
-	if err != nil {
-		return err
-	}
 
 	s, err := store.Open(ctx, app.Config.Paths.DB)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
+	accounts, fresh, err := accountsForConnection(ctx, p, s, providerName, c.Connection)
+	if err != nil {
+		return err
+	}
 
 	seen := 0
 	localConnectionID := store.LocalConnectionID(providerName, c.Connection)
@@ -65,17 +65,23 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 		if providerResourceID == "" {
 			providerResourceID = account.ProviderAccountID
 		}
-		if !archivedInstitutions[account.InstitutionID] {
-			countries := institutionArchiveCountries(app.Config, providerName, account.InstitutionID)
-			if err := archiveInstitutionByID(ctx, p, s, countries, account.InstitutionID); err != nil {
+		localID := account.ID
+		if fresh {
+			if !archivedInstitutions[account.InstitutionID] {
+				countries := institutionArchiveCountries(app.Config, providerName, account.InstitutionID)
+				if err := archiveInstitutionByID(ctx, p, s, countries, account.InstitutionID); err != nil {
+					return err
+				}
+				archivedInstitutions[account.InstitutionID] = true
+			}
+			account.ConnectionID = localConnectionID
+			localID, err = s.UpsertAccount(ctx, account)
+			if err != nil {
 				return err
 			}
-			archivedInstitutions[account.InstitutionID] = true
 		}
-		account.ConnectionID = localConnectionID
-		localID, err := s.UpsertAccount(ctx, account)
-		if err != nil {
-			return err
+		if localID == "" {
+			return errors.New("stored account missing local id")
 		}
 		transactions, err := p.FetchTransactions(ctx, providerResourceID, valueOrZero(from), valueOrZero(to))
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"gobankcli/internal/provider"
+	"gobankcli/internal/provider/enablebanking"
 	"gobankcli/internal/store"
 )
 
@@ -41,16 +42,19 @@ func (c AccountsCmd) Run(ctx context.Context, app *App) error {
 		return err
 	}
 	providerName = p.Name()
-	accounts, err := p.ListAccounts(ctx, c.Connection)
-	if err != nil {
-		return err
-	}
 	s, err := store.Open(ctx, app.Config.Paths.DB)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
 	localConnectionID := store.LocalConnectionID(providerName, c.Connection)
+	accounts, fresh, err := accountsForConnection(ctx, p, s, providerName, c.Connection)
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		return app.Out.Write(accountsReport{Accounts: accountReports(accounts), Count: len(accounts)})
+	}
 	archivedInstitutions := map[string]bool{}
 	for i := range accounts {
 		if !archivedInstitutions[accounts[i].InstitutionID] {
@@ -68,6 +72,24 @@ func (c AccountsCmd) Run(ctx context.Context, app *App) error {
 		accounts[i].ID = id
 	}
 	return app.Out.Write(accountsReport{Accounts: accountReports(accounts), Count: len(accounts)})
+}
+
+func accountsForConnection(ctx context.Context, p provider.Provider, s *store.Store, providerName, providerConnectionID string) ([]provider.Account, bool, error) {
+	accounts, err := p.ListAccounts(ctx, providerConnectionID)
+	if err == nil {
+		return accounts, true, nil
+	}
+	if providerName != enablebanking.Name || !errors.Is(err, enablebanking.ErrMissingStableAccountID) {
+		return nil, false, err
+	}
+	stored, storedErr := s.AccountsByConnection(ctx, store.LocalConnectionID(providerName, providerConnectionID))
+	if storedErr != nil {
+		return nil, false, storedErr
+	}
+	if len(stored) == 0 {
+		return nil, false, err
+	}
+	return stored, false, nil
 }
 
 func accountReports(accounts []provider.Account) []accountReport {

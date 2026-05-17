@@ -3,7 +3,13 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +17,7 @@ import (
 
 	"gobankcli/internal/config"
 	"gobankcli/internal/provider"
+	"gobankcli/internal/store"
 )
 
 func TestDoctorJSONMissingCredentials(t *testing.T) {
@@ -21,7 +28,7 @@ func TestDoctorJSONMissingCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := stdout.String()
-	for _, want := range []string{`"config_exists": false`, `"gocardless_secret_id": "missing"`, `"gocardless_secret_key": "missing"`, `"gocardless_configured": false`} {
+	for _, want := range []string{`"config_exists": false`, `"gocardless_secret_id": "missing"`, `"gocardless_secret_key": "missing"`, `"gocardless_configured": false`, `"enablebanking_application_id": "missing"`, `"enablebanking_private_key_path": "missing"`, `"enablebanking_api": "default"`, `"enablebanking_configured": false`} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("doctor output missing %s:\n%s", want, got)
 		}
@@ -162,6 +169,151 @@ func TestInstitutionsMissingGoCardlessCredentials(t *testing.T) {
 	}
 }
 
+func TestInstitutionsMissingEnableBankingCredentials(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvEnableBankingApplicationID, "")
+	t.Setenv(config.EnvEnableBankingPrivateKey, "")
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"institutions", "--provider", "enablebanking", "--country", "BE"}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "enablebanking credentials missing") {
+		t.Fatalf("Run error = %v, want missing credentials", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestAuthorizeEnableBankingExchangesCodeAndArchivesAccounts(t *testing.T) {
+	var sawSessionCode bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/sessions":
+			var body map[string]string
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body["code"] != "callback-code" {
+				t.Fatalf("session body = %#v", body)
+			}
+			sawSessionCode = true
+			writeCmdJSON(t, w, map[string]any{
+				"session_id": "session-1",
+				"status":     "AUTHORIZED",
+				"access":     map[string]string{"valid_until": "2026-08-15T12:00:00Z"},
+				"accounts": []map[string]any{{
+					"uid":                 "session-account-uid",
+					"identification_hash": "stable-hash",
+					"name":                "Current",
+					"currency":            "EUR",
+					"account_id":          map[string]string{"iban": "BE00000000000000"},
+				}},
+			})
+		case "/sessions/session-1":
+			writeCmdJSON(t, w, map[string]any{
+				"session_id": "session-1",
+				"status":     "AUTHORIZED",
+				"aspsp":      map[string]string{"name": "Belfius", "country": "BE"},
+				"accounts":   []string{"session-account-uid"},
+			})
+		case "/accounts/session-account-uid/transactions":
+			writeCmdJSON(t, w, map[string]any{"transactions": []map[string]any{{
+				"transaction_id":         "tx-1",
+				"status":                 "BOOK",
+				"credit_debit_indicator": "DBIT",
+				"booking_date":           "2026-05-01",
+				"transaction_amount":     map[string]string{"amount": "12.34", "currency": "EUR"},
+				"creditor":               map[string]string{"name": "Shop"},
+			}}})
+		case "/aspsps":
+			writeCmdJSON(t, w, map[string]any{"aspsps": []map[string]any{{
+				"name":    "Belfius",
+				"country": "BE",
+			}}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	home := t.TempDir()
+	dbPath := filepath.Join(home, "archive.db")
+	ctx := context.Background()
+	s, err := store.Open(ctx, dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UpsertConnection(ctx, provider.Connection{
+		Provider:             "enablebanking",
+		ProviderConnectionID: "pending-state",
+		InstitutionID:        "BE:Belfius",
+		Status:               "PENDING",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	t.Setenv(config.EnvEnableBankingApplicationID, "app-123")
+	t.Setenv(config.EnvEnableBankingPrivateKey, writeTestRSAKey(t))
+	t.Setenv(config.EnvEnableBankingAPI, server.URL)
+	var stdout, stderr bytes.Buffer
+	err = Run(ctx, []string{"--db", dbPath, "--json", "authorize", "--provider", "enablebanking", "--url", "https://app.example/callback?code=callback-code&state=pending-state", "--institution", "BE:Belfius"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sawSessionCode {
+		t.Fatal("session exchange was not called")
+	}
+	got := stdout.String()
+	for _, want := range []string{`"provider_connection_id": "session-1"`, `"status": "AUTHORIZED"`, `"accounts": 1`} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("authorize output missing %s:\n%s", want, got)
+		}
+	}
+
+	stdout.Reset()
+	err = Run(context.Background(), []string{"--db", dbPath, "--plain", "query", "select provider, provider_account_id, provider_resource_id from accounts"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); !strings.Contains(got, "enablebanking\tstable-hash\tsession-account-uid") {
+		t.Fatalf("archived account row = %q", got)
+	}
+
+	stdout.Reset()
+	err = Run(ctx, []string{"--db", dbPath, "--json", "sync", "--provider", "enablebanking", "--connection", "session-1", "--from", "2026-05-01", "--to", "2026-05-31"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); !strings.Contains(got, `"transactions_seen": 1`) {
+		t.Fatalf("sync output = %q", got)
+	}
+}
+
+func TestAuthorizationCodeParsing(t *testing.T) {
+	got, err := authorizationCode("", "https://app.example/callback?state=s&code=abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "abc" {
+		t.Fatalf("code = %q", got)
+	}
+	callback, err := authorizationCallback("", "", "https://app.example/callback?state=s&code=abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if callback.Code != "abc" || callback.State != "s" {
+		t.Fatalf("callback = %+v", callback)
+	}
+	if _, err := authorizationCode("abc", "https://app.example/callback?code=def"); err == nil || !strings.Contains(err.Error(), "either --code or --url") {
+		t.Fatalf("err = %v, want exclusivity error", err)
+	}
+	if _, err := authorizationCode("", "https://app.example/callback?state=s"); err == nil || !strings.Contains(err.Error(), "missing code") {
+		t.Fatalf("err = %v, want missing code", err)
+	}
+}
+
 func TestAccountReportsOmitRawJSON(t *testing.T) {
 	report := accountsReport{Accounts: accountReports([]provider.Account{{
 		ID:                "account_local",
@@ -176,6 +328,28 @@ func TestAccountReportsOmitRawJSON(t *testing.T) {
 	got := string(b)
 	if strings.Contains(got, "RawJSON") || strings.Contains(got, "Sensitive") {
 		t.Fatalf("account report leaked raw JSON: %s", got)
+	}
+}
+
+func writeTestRSAKey(t *testing.T) string {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "enablebanking.pem")
+	b := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func writeCmdJSON(t *testing.T, w http.ResponseWriter, v any) {
+	t.Helper()
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		t.Fatal(err)
 	}
 }
 

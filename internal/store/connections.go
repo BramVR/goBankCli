@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"gobankcli/internal/provider"
@@ -50,6 +51,18 @@ func (s *Store) connectionID(ctx context.Context, providerName, providerConnecti
 	var id string
 	err := s.db.QueryRowContext(ctx, `select id from connections where provider = ? and provider_connection_id = ?`, providerName, providerConnectionID).Scan(&id)
 	return id, err
+}
+
+func (s *Store) ConnectionExists(ctx context.Context, providerName, providerConnectionID string) (bool, error) {
+	var id string
+	err := s.db.QueryRowContext(ctx, `select id from connections where provider = ? and provider_connection_id = ?`, providerName, providerConnectionID).Scan(&id)
+	if err == nil {
+		return true, nil
+	}
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return false, err
 }
 
 func timeString(t time.Time) string {

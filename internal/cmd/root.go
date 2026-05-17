@@ -25,6 +25,7 @@ type CLI struct {
 	Globals
 
 	Accounts     AccountsCmd     `cmd:"" help:"Fetch and archive accounts for a connection."`
+	Authorize    AuthorizeCmd    `cmd:"" help:"Exchange a provider callback code for a usable connection."`
 	Connect      ConnectCmd      `cmd:"" help:"Start a read-only bank consent flow."`
 	Doctor       DoctorCmd       `cmd:"" help:"Check local config, archive, and provider credentials."`
 	Export       ExportCmd       `cmd:"" help:"Export normalized transactions as CSV."`
