@@ -54,6 +54,12 @@ commands and tests do not need live credentials.
 Use `--json` for stable JSON and `--plain` for simple key-value output.
 Human hints and warnings go to stderr; requested data goes to stdout.
 
+## Providers
+
+The core provider interface is bank-agnostic. GoCardless Bank Account Data is
+the first concrete provider target; Ponto, CODA-style statement providers, and
+manual CSV import can be added behind the same interface later.
+
 ## Development
 
 ```bash

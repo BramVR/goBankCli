@@ -10,6 +10,10 @@ Providers are bank-agnostic. GoCardless Bank Account Data is the first concrete
 provider, but commands should depend on provider interfaces, not bank-specific
 code.
 
+The provider package owns generic institutions, connections, accounts,
+transactions, and sync runs. Concrete providers normalize their API payloads
+into those models before store/export code sees them.
+
 SQLite is the local archive because it is durable, inspectable, scriptable, and
 works well for private single-user data. Raw provider JSON will be preserved
 beside normalized rows so normalization can improve without losing source data.
