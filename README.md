@@ -79,3 +79,13 @@ make fmt
 make test
 make ci
 ```
+
+Docs:
+
+- [architecture](docs/architecture.md)
+- [commands](docs/commands.md)
+- [configuration](docs/configuration.md)
+- [data model](docs/data-model.md)
+- [examples](docs/examples.md)
+- [providers](docs/providers.md)
+- [security](docs/security.md)
