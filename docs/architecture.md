@@ -1,3 +1,9 @@
+---
+summary: "Core architecture spine, package boundaries, and local archive design."
+read_when:
+  - "Changing provider, store, export, or CLI boundaries."
+  - "Checking the bank-agnostic design constraints."
+---
 # Architecture
 
 `gobankcli` uses one spine:

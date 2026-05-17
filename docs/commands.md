@@ -1,3 +1,9 @@
+---
+summary: "CLI commands, global flags, and output behavior."
+read_when:
+  - "Adding or changing commands, flags, or scriptable output."
+  - "Updating user-facing command docs."
+---
 # Commands
 
 Global flags:

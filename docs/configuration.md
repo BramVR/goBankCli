@@ -1,3 +1,9 @@
+---
+summary: "Config file, default paths, and GoCardless credential environment variables."
+read_when:
+  - "Changing config loading, defaults, paths, or credential discovery."
+  - "Updating setup instructions."
+---
 # Configuration
 
 Default paths:

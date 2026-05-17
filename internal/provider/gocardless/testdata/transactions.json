@@ -1,0 +1,40 @@
+{
+  "transactions": {
+    "booked": [
+      {
+        "transactionId": "2020103000624289-1",
+        "debtorName": "MON MOTHMA",
+        "debtorAccount": {
+          "iban": "GL53SAFI055151515"
+        },
+        "transactionAmount": {
+          "currency": "EUR",
+          "amount": "45.00"
+        },
+        "bookingDate": "2020-10-30",
+        "valueDate": "2020-10-30",
+        "remittanceInformationUnstructured": "For the support of Restoration of the Republic foundation"
+      },
+      {
+        "transactionId": "2020111101899195-1",
+        "transactionAmount": {
+          "currency": "EUR",
+          "amount": "-15.00"
+        },
+        "bookingDate": "2020-11-11",
+        "valueDate": "2020-11-11",
+        "remittanceInformationUnstructured": "PAYMENT Alderaan Coffee"
+      }
+    ],
+    "pending": [
+      {
+        "transactionAmount": {
+          "currency": "EUR",
+          "amount": "-10.00"
+        },
+        "valueDate": "2020-11-03",
+        "remittanceInformationUnstructured": "Reserved PAYMENT"
+      }
+    ]
+  }
+}

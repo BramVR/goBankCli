@@ -1,0 +1,10 @@
+{
+  "account": {
+    "resourceId": "resource-1",
+    "iban": "BE00000000000000",
+    "currency": "EUR",
+    "name": "Current account",
+    "displayName": "Main checking",
+    "ownerName": "Test User"
+  }
+}

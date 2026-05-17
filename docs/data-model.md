@@ -1,3 +1,9 @@
+---
+summary: "SQLite tables, transaction dedupe rules, and normalized CSV schema."
+read_when:
+  - "Changing archive schema, transaction identity, or CSV exports."
+  - "Working on store migrations or export queries."
+---
 # Data Model
 
 The SQLite archive stores normalized rows plus raw provider JSON where useful.

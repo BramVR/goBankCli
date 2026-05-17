@@ -1,3 +1,9 @@
+---
+summary: "Development commands, testing expectations, and fixture rules."
+read_when:
+  - "Running local verification or adding tests."
+  - "Changing development workflow docs."
+---
 # Development
 
 Use the repository Makefile:

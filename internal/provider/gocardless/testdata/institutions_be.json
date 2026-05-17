@@ -1,0 +1,16 @@
+[
+  {
+    "id": "BELFIUS_GKCCBEBB",
+    "name": "Belfius",
+    "bic": "GKCCBEBB",
+    "transaction_total_days": "90",
+    "countries": ["BE"]
+  },
+  {
+    "id": "SANDBOXFINANCE_SFIN0000",
+    "name": "Sandbox Finance",
+    "bic": "SFIN0000",
+    "transaction_total_days": "90",
+    "countries": ["BE"]
+  }
+]
