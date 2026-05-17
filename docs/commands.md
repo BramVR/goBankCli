@@ -35,4 +35,5 @@ none exists.
 gobankcli status
 ```
 
-Shows archive status. Full SQLite counts land with the archive schema.
+Opens or creates the local SQLite archive, applies migrations, and prints row
+counts for institutions, connections, accounts, transactions, and sync runs.

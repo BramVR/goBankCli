@@ -67,3 +67,20 @@ func TestInitForceOverwritesInvalidConfig(t *testing.T) {
 		t.Fatalf("config was not overwritten with defaults:\n%s", b)
 	}
 }
+
+func TestStatusPlainOmitsEmptyMessage(t *testing.T) {
+	home := t.TempDir()
+	dbPath := filepath.Join(home, "archive.db")
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--db", dbPath, "--plain", "status"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := stdout.String()
+	if !strings.Contains(got, "archive_open: true") {
+		t.Fatalf("status output missing archive_open:\n%s", got)
+	}
+	if strings.Contains(got, "message:") {
+		t.Fatalf("status output should not include empty message:\n%s", got)
+	}
+}
