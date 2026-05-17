@@ -14,6 +14,7 @@ requested.
 
 - GoCardless Bank Account Data read-only access.
 - Enable Banking AIS read-only access.
+- Short-lived loopback callback listener for Enable Banking authorization.
 - Local SQLite archive with private file permissions.
 - Normalized CSV export to configured paths or explicit `--out` paths.
 - Environment-variable credentials for provider API access.
@@ -25,7 +26,7 @@ requested.
 - Reverse-engineered private bank endpoints.
 - Payment initiation.
 - Bank password storage.
-- Public dashboard or local web server.
+- Public dashboard or long-running web server.
 
 ## Credentials
 

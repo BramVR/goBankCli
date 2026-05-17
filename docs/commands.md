@@ -52,13 +52,19 @@ institution ID after the provider response is normalized.
 ```bash
 gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
 gobankcli connect --provider enablebanking --institution BE:Belfius --redirect https://example.test/callback
+gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:8787
 ```
 
 Starts a read-only provider consent flow and stores the returned connection in
 the archive. The output includes the provider connection ID and redirect URL.
 
 For Enable Banking, the provider connection ID from this command is the pending
-callback `state`.
+callback `state`. With `--listen`, `connect` instead starts a loopback callback
+server, prints the browser URL on stderr, waits for one callback, validates
+`state`, exchanges `code`, archives the session/accounts, and outputs the
+authorized session report. Use `--callback-timeout` to control how long it
+waits. Because it waits for browser consent, `--listen` is rejected with
+`--no-input`.
 
 ## authorize
 

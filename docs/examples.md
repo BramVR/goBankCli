@@ -50,7 +50,17 @@ gobankcli connect \
 Open the returned redirect URL, finish consent with the provider, then use the
 returned provider connection ID for account and sync commands.
 
-For Enable Banking, exchange the callback URL first:
+For Enable Banking, prefer the local callback listener:
+
+```bash
+gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --listen 127.0.0.1:8787
+```
+
+Register `http://127.0.0.1:8787/enablebanking/callback` as the app redirect
+URL. If you need a hosted or HTTPS redirect URL, use the manual callback flow:
 
 ```bash
 gobankcli connect \

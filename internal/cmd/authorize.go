@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"gobankcli/internal/provider"
 	"gobankcli/internal/provider/enablebanking"
 	"gobankcli/internal/store"
 )
@@ -45,30 +46,38 @@ func (c AuthorizeCmd) Run(ctx context.Context, app *App) error {
 		return err
 	}
 	defer s.Close()
-	if callback.State == "" {
-		return errors.New("state is required")
-	}
-	found, err := s.ConnectionExists(ctx, p.Name(), callback.State)
+	report, err := completeAuthorization(ctx, app, p, exchanger, s, callback, c.Institution)
 	if err != nil {
 		return err
 	}
+	return app.Out.Write(report)
+}
+
+func completeAuthorization(ctx context.Context, app *App, p provider.Provider, exchanger enablebanking.SessionExchanger, s *store.Store, callback callbackParams, institutionID string) (authorizeReport, error) {
+	if callback.State == "" {
+		return authorizeReport{}, errors.New("state is required")
+	}
+	found, err := s.ConnectionExists(ctx, p.Name(), callback.State)
+	if err != nil {
+		return authorizeReport{}, err
+	}
 	if !found {
-		return errors.New("state does not match a pending connection")
+		return authorizeReport{}, errors.New("state does not match a pending connection")
 	}
 
 	session, accounts, err := exchanger.ExchangeSession(ctx, callback.Code)
 	if err != nil {
-		return err
+		return authorizeReport{}, err
 	}
 	if session.Connection.InstitutionID == "" {
-		session.Connection.InstitutionID = strings.TrimSpace(c.Institution)
+		session.Connection.InstitutionID = strings.TrimSpace(institutionID)
 	}
 	if session.Connection.InstitutionID == "" {
-		return errors.New("institution is required when the provider session response omits it")
+		return authorizeReport{}, errors.New("institution is required when the provider session response omits it")
 	}
 	connectionID, err := s.UpsertConnection(ctx, session.Connection)
 	if err != nil {
-		return err
+		return authorizeReport{}, err
 	}
 	archivedInstitutions := map[string]bool{}
 	for i := range accounts {
@@ -78,21 +87,21 @@ func (c AuthorizeCmd) Run(ctx context.Context, app *App) error {
 		if !archivedInstitutions[accounts[i].InstitutionID] {
 			countries := institutionArchiveCountries(app.Config, p.Name(), accounts[i].InstitutionID)
 			if err := archiveInstitutionByID(ctx, p, s, countries, accounts[i].InstitutionID); err != nil {
-				return err
+				return authorizeReport{}, err
 			}
 			archivedInstitutions[accounts[i].InstitutionID] = true
 		}
 		accounts[i].ConnectionID = connectionID
 		if _, err := s.UpsertAccount(ctx, accounts[i]); err != nil {
-			return err
+			return authorizeReport{}, err
 		}
 	}
-	return app.Out.Write(authorizeReport{
+	return authorizeReport{
 		ProviderConnectionID: session.Connection.ProviderConnectionID,
 		ConnectionID:         connectionID,
 		Status:               session.Connection.Status,
 		Accounts:             len(accounts),
-	})
+	}, nil
 }
 
 type callbackParams struct {

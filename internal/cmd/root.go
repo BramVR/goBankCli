@@ -44,6 +44,7 @@ type App struct {
 	OutputMode outfmt.Mode
 	Stdout     io.Writer
 	Stderr     io.Writer
+	NoInput    bool
 }
 
 func Run(ctx context.Context, args []string, version string, stdout, stderr io.Writer) error {
@@ -104,6 +105,7 @@ func Run(ctx context.Context, args []string, version string, stdout, stderr io.W
 		OutputMode: mode,
 		Stdout:     stdout,
 		Stderr:     stderr,
+		NoInput:    cli.NoInput,
 	}
 	kctx.Bind(app)
 	kctx.BindTo(ctx, (*context.Context)(nil))

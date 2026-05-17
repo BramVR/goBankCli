@@ -73,11 +73,10 @@ gobankcli status
 gobankcli export
 ```
 
-For Enable Banking, exchange the callback before syncing:
+For Enable Banking, use a short-lived local callback listener:
 
 ```bash
-gobankcli connect --provider enablebanking --institution BE:Belfius --redirect https://example.test/callback
-gobankcli authorize --provider enablebanking --url "https://example.test/callback?code=CODE&state=STATE" --institution BE:Belfius
+gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:8787
 gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
 ```
 
@@ -165,7 +164,11 @@ If credentials are missing, live provider commands fail with
 
 This assumes an Enable Banking application with read-only account information
 access, a registered redirect URL, application ID, and downloaded RSA private
-key.
+key. For the local callback flow, register:
+
+```text
+http://127.0.0.1:8787/enablebanking/callback
+```
 
 1. Set credentials:
 
@@ -188,7 +191,22 @@ gobankcli institutions --provider enablebanking --country BE --query belfius
 
 Enable Banking institution IDs use `COUNTRY:Name`, for example `BE:Belfius`.
 
-3. Start authorization:
+3. Start authorization with a local callback listener:
+
+```bash
+gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --listen 127.0.0.1:8787
+```
+
+The command prints a browser URL on stderr, waits for one callback on the
+loopback listener, validates `state`, exchanges the callback `code`, archives
+the session/accounts, then exits. Use the returned session ID for sync.
+Because this waits for browser consent, it is not available with `--no-input`.
+
+If Enable Banking requires a hosted or HTTPS redirect URL for your app, use the
+manual fallback:
 
 ```bash
 gobankcli connect \
@@ -199,7 +217,7 @@ gobankcli connect \
 
 Open `redirect_url`, complete the bank flow, then copy the full callback URL.
 
-4. Exchange the callback:
+4. Exchange a manual callback:
 
 ```bash
 gobankcli authorize \
@@ -294,6 +312,7 @@ gobankcli doctor
 gobankcli init
 gobankcli institutions --country BE --query belfius
 gobankcli connect --institution BELFIUS_GKCCBEBB --redirect https://example.test/callback
+gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:8787
 gobankcli authorize --provider enablebanking --url "https://example.test/callback?code=CODE&state=STATE" --institution BE:Belfius
 gobankcli accounts --connection PROVIDER_CONNECTION_ID
 gobankcli sync --connection PROVIDER_CONNECTION_ID --from 2026-01-01
@@ -318,6 +337,7 @@ gobankcli export --help
 - Does not store bank passwords.
 - Does not initiate payments.
 - Does not run a dashboard or public web server.
+- Runs a short-lived loopback callback listener only when `--listen` is used.
 - Keeps bank data under configured local paths unless `--out` explicitly points
   elsewhere.
 - Writes SQLite/config/export files with restrictive permissions.

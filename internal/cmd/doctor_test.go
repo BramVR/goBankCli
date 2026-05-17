@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"gobankcli/internal/config"
 	"gobankcli/internal/provider"
@@ -288,6 +289,181 @@ func TestAuthorizeEnableBankingExchangesCodeAndArchivesAccounts(t *testing.T) {
 	}
 	if got := stdout.String(); !strings.Contains(got, `"transactions_seen": 1`) {
 		t.Fatalf("sync output = %q", got)
+	}
+}
+
+func TestConnectEnableBankingListenExchangesCallback(t *testing.T) {
+	type authRequest struct {
+		redirectURL string
+		state       string
+	}
+	authRequests := make(chan authRequest, 1)
+	var sawSessionCode bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/aspsps":
+			writeCmdJSON(t, w, map[string]any{"aspsps": []map[string]any{{
+				"name":                     "Belfius",
+				"country":                  "BE",
+				"maximum_consent_validity": 86400,
+			}}})
+		case "/auth":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			authRequests <- authRequest{
+				redirectURL: body["redirect_url"].(string),
+				state:       body["state"].(string),
+			}
+			writeCmdJSON(t, w, map[string]string{"url": "https://bank.example/auth"})
+		case "/sessions":
+			var body map[string]string
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body["code"] != "callback-code" {
+				t.Fatalf("session body = %#v", body)
+			}
+			sawSessionCode = true
+			writeCmdJSON(t, w, map[string]any{
+				"session_id": "session-1",
+				"status":     "AUTHORIZED",
+				"access":     map[string]string{"valid_until": "2026-08-15T12:00:00Z"},
+				"accounts": []map[string]any{{
+					"uid":                 "session-account-uid",
+					"identification_hash": "stable-hash",
+					"name":                "Current",
+				}},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	home := t.TempDir()
+	dbPath := filepath.Join(home, "archive.db")
+	t.Setenv("HOME", home)
+	t.Setenv(config.EnvEnableBankingApplicationID, "app-123")
+	t.Setenv(config.EnvEnableBankingPrivateKey, writeTestRSAKey(t))
+	t.Setenv(config.EnvEnableBankingAPI, server.URL)
+	var stdout, stderr bytes.Buffer
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(context.Background(), []string{"--db", dbPath, "--json", "connect", "--provider", "enablebanking", "--institution", "BE:Belfius", "--listen", "127.0.0.1:0", "--callback-timeout", "3s"}, "test", &stdout, &stderr)
+	}()
+
+	var auth authRequest
+	select {
+	case auth = <-authRequests:
+	case <-time.After(2 * time.Second):
+		t.Fatal("auth request was not sent")
+	}
+	callbackURL := auth.redirectURL + "?code=callback-code&state=" + auth.state
+	deadline := time.After(2 * time.Second)
+	for {
+		resp, err := http.Get(callbackURL)
+		if err == nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				break
+			}
+		}
+		select {
+		case <-time.After(25 * time.Millisecond):
+		case <-deadline:
+			t.Fatal("callback server did not accept request")
+		}
+	}
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("connect did not finish")
+	}
+	if !sawSessionCode {
+		t.Fatal("session exchange was not called")
+	}
+	if got := stdout.String(); !strings.Contains(got, `"provider_connection_id": "session-1"`) || !strings.Contains(got, `"accounts": 1`) {
+		t.Fatalf("connect output = %s", got)
+	}
+	if got := stderr.String(); !strings.Contains(got, "Open this URL: https://bank.example/auth") || !strings.Contains(got, "Waiting for callback") {
+		t.Fatalf("stderr = %q", got)
+	}
+}
+
+func TestConnectListenRejectsNoInput(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvEnableBankingApplicationID, "app-123")
+	t.Setenv(config.EnvEnableBankingPrivateKey, writeTestRSAKey(t))
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--no-input", "connect", "--provider", "enablebanking", "--institution", "BE:Belfius", "--listen", "127.0.0.1:0"}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "listen is not supported with --no-input") {
+		t.Fatalf("Run error = %v, want no-input listen rejection", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestListenLoopbackPreservesRequestedHost(t *testing.T) {
+	listener, callbackAddress, err := listenLoopback("localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	if !strings.HasPrefix(callbackAddress, "localhost:") {
+		t.Fatalf("callback address = %q, want localhost host", callbackAddress)
+	}
+}
+
+func TestLocalCallbackIgnoresErrorWithWrongState(t *testing.T) {
+	listener, callbackAddress, err := listenLoopback("127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan callbackResult, 1)
+	go func() {
+		callback, err := waitForLocalCallback(context.Background(), listener, "expected-state", 2*time.Second)
+		done <- callbackResult{callback: callback, err: err}
+	}()
+
+	resp, err := http.Get(localCallbackURL(callbackAddress) + "?error=access_denied&state=wrong-state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("wrong-state error status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
+	}
+	select {
+	case item := <-done:
+		t.Fatalf("callback completed early: %#v", item)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	resp, err = http.Get(localCallbackURL(callbackAddress) + "?code=callback-code&state=expected-state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("valid callback status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	select {
+	case item := <-done:
+		if item.err != nil {
+			t.Fatal(item.err)
+		}
+		if item.callback.Code != "callback-code" || item.callback.State != "expected-state" {
+			t.Fatalf("callback = %#v", item.callback)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("callback did not complete")
 	}
 }
 
