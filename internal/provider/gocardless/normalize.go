@@ -98,7 +98,7 @@ func NormalizeTransaction(accountID string, raw transactionPayload) (provider.Tr
 		CounterpartyAccount:   counterpartyAccount,
 		Description:           firstNonEmpty(raw.AdditionalInformation, remittanceInfo),
 		RemittanceInfo:        remittanceInfo,
-		Reference:             firstReference(raw.EntryReference, raw.EndToEndID, raw.RemittanceInformationStructured, firstStructuredReference(raw.RemittanceInformationStructuredArray)),
+		Reference:             firstReference(raw.EntryReference, raw.EndToEndID),
 		RawJSON:               copyRaw(raw.Raw),
 	}, nil
 }
@@ -123,18 +123,29 @@ func counterparty(raw transactionPayload) (string, string) {
 
 func remittanceText(raw transactionPayload) string {
 	if len(raw.RemittanceInformationUnstructuredArray) > 0 {
-		return strings.Join(raw.RemittanceInformationUnstructuredArray, " ")
-	}
-	return raw.RemittanceInformationUnstructured
-}
-
-func firstStructuredReference(items []string) string {
-	for _, item := range items {
-		if strings.TrimSpace(item) != "" {
-			return item
+		if joined := joinNonEmpty(raw.RemittanceInformationUnstructuredArray); joined != "" {
+			return joined
 		}
 	}
-	return ""
+	if strings.TrimSpace(raw.RemittanceInformationUnstructured) != "" {
+		return raw.RemittanceInformationUnstructured
+	}
+	if len(raw.RemittanceInformationStructuredArray) > 0 {
+		if joined := joinNonEmpty(raw.RemittanceInformationStructuredArray); joined != "" {
+			return joined
+		}
+	}
+	return raw.RemittanceInformationStructured
+}
+
+func joinNonEmpty(items []string) string {
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 func firstReference(values ...string) string {

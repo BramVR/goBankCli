@@ -81,7 +81,7 @@ func TestNormalizeTransactionDirectionAndStructuredReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tx.CounterpartyName != "Employer" || tx.CounterpartyAccount != "BE11111111111111" || tx.Reference != "STRUCTURED-REF" {
+	if tx.CounterpartyName != "Employer" || tx.CounterpartyAccount != "BE11111111111111" || tx.RemittanceInfo != "STRUCTURED-REF" || tx.Reference != "" {
 		t.Fatalf("incoming transaction = %+v", tx)
 	}
 
@@ -108,6 +108,22 @@ func TestNormalizeTransactionUsesDateTimeFallback(t *testing.T) {
 	}
 	if tx.BookingDate.Format("2006-01-02") != "2026-05-17" || tx.ValueDate == nil || tx.ValueDate.Format("2006-01-02") != "2026-05-18" {
 		t.Fatalf("datetime fallback dates = booking %s value %v", tx.BookingDate, tx.ValueDate)
+	}
+}
+
+func TestNormalizeTransactionFallsBackAfterBlankRemittanceArray(t *testing.T) {
+	raw := transactionPayload{
+		BookingDate:                            "2026-05-17",
+		RemittanceInformationUnstructured:      "fallback text",
+		RemittanceInformationUnstructuredArray: []string{"", " "},
+		TransactionAmount:                      amountPayload{Amount: "-25.00", Currency: "EUR"},
+	}
+	tx, err := NormalizeTransaction("account-1", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tx.RemittanceInfo != "fallback text" || tx.Description != "fallback text" {
+		t.Fatalf("remittance fallback = %+v", tx)
 	}
 }
 
