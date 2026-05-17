@@ -73,6 +73,14 @@ gobankcli status
 gobankcli export
 ```
 
+For Enable Banking, exchange the callback before syncing:
+
+```bash
+gobankcli connect --provider enablebanking --institution BE:Belfius --redirect https://example.test/callback
+gobankcli authorize --provider enablebanking --url "https://example.test/callback?code=CODE&state=STATE" --institution BE:Belfius
+gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
+```
+
 Inspect the local archive:
 
 ```bash
@@ -232,6 +240,10 @@ Use `--no-input` for cron and agent runs:
 GOBANKCLI_GOCARDLESS_SECRET_ID=... \
 GOBANKCLI_GOCARDLESS_SECRET_KEY=... \
 gobankcli --no-input sync --connection PROVIDER_CONNECTION_ID --from 2026-01-01
+
+GOBANKCLI_ENABLEBANKING_APP_ID=... \
+GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH=~/.config/gobankcli/enablebanking.pem \
+gobankcli --no-input sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
 
 gobankcli --no-input export --out ~/Finance/gobankcli/exports/normalized.csv
 ```
