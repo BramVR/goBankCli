@@ -84,3 +84,26 @@ func TestStatusPlainOmitsEmptyMessage(t *testing.T) {
 		t.Fatalf("status output should not include empty message:\n%s", got)
 	}
 }
+
+func TestExportWritesDefaultCSV(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("XDG_DATA_HOME", "")
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"export"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exportPath := filepath.Join(home, "Finance", "gobankcli", "exports", "normalized.csv")
+	b, err := os.ReadFile(exportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(b), "date,value_date,account_id,iban,institution,counterparty_name,counterparty_account,description,amount,currency,transaction_id,provider,category\n") {
+		t.Fatalf("export CSV header mismatch:\n%s", b)
+	}
+	if !strings.Contains(stdout.String(), "rows: 0") {
+		t.Fatalf("export report missing row count:\n%s", stdout.String())
+	}
+}

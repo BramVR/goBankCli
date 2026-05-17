@@ -27,6 +27,7 @@ gobankcli init
 gobankcli doctor
 gobankcli --json doctor
 gobankcli status
+gobankcli export
 ```
 
 GoCardless credentials are read from environment variables:
@@ -48,6 +49,7 @@ commands and tests do not need live credentials.
 ## Current Commands
 
 - `doctor`: checks config paths and GoCardless credential presence
+- `export`: writes normalized transaction CSV
 - `init`: writes a starter config and creates local directories
 - `status`: shows local archive status
 

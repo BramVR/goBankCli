@@ -25,16 +25,18 @@ type CLI struct {
 	Globals
 
 	Doctor DoctorCmd `cmd:"" help:"Check local config, archive, and provider credentials."`
+	Export ExportCmd `cmd:"" help:"Export normalized transactions as CSV."`
 	Init   InitCmd   `cmd:"" help:"Write a starter config and create local directories."`
 	Status StatusCmd `cmd:"" help:"Show local archive status."`
 }
 
 type App struct {
-	Version string
-	Config  config.Config
-	Out     *outfmt.Writer
-	Stdout  io.Writer
-	Stderr  io.Writer
+	Version    string
+	Config     config.Config
+	Out        *outfmt.Writer
+	OutputMode outfmt.Mode
+	Stdout     io.Writer
+	Stderr     io.Writer
 }
 
 func Run(ctx context.Context, args []string, version string, stdout, stderr io.Writer) error {
@@ -89,11 +91,12 @@ func Run(ctx context.Context, args []string, version string, stdout, stderr io.W
 	}
 
 	app := &App{
-		Version: version,
-		Config:  cfg,
-		Out:     outfmt.New(stdout, mode),
-		Stdout:  stdout,
-		Stderr:  stderr,
+		Version:    version,
+		Config:     cfg,
+		Out:        outfmt.New(stdout, mode),
+		OutputMode: mode,
+		Stdout:     stdout,
+		Stderr:     stderr,
 	}
 	kctx.Bind(app)
 	kctx.BindTo(ctx, (*context.Context)(nil))

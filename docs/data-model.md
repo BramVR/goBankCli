@@ -19,3 +19,9 @@ Transaction deduplication order:
 - provider/account reference
 - stable hash of provider, account, booking date, amount, currency,
   counterparty, and description
+
+CSV exports use this stable header:
+
+```csv
+date,value_date,account_id,iban,institution,counterparty_name,counterparty_account,description,amount,currency,transaction_id,provider,category
+```

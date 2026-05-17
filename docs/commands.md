@@ -37,3 +37,14 @@ gobankcli status
 
 Opens or creates the local SQLite archive, applies migrations, and prints row
 counts for institutions, connections, accounts, transactions, and sync runs.
+
+## export
+
+```bash
+gobankcli export
+gobankcli export --from 2026-01-01 --to 2026-01-31 --out january.csv
+gobankcli export --account ACCOUNT_ID --out -
+```
+
+Exports normalized transaction CSV with a stable header. Without `--out`, the
+file is written to `normalized.csv` inside the configured exports directory.

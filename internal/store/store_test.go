@@ -311,3 +311,62 @@ func TestStoreAllowsSameProviderTransactionIDAcrossAccounts(t *testing.T) {
 		t.Fatalf("transactions = %d, want 2", status.Transactions)
 	}
 }
+
+func TestListTransactionsForCSVExport(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	institutionID, err := s.UpsertInstitution(ctx, provider.Institution{
+		Provider:              "gocardless",
+		ProviderInstitutionID: "BELFIUS_GKCCBEBB",
+		Name:                  "Belfius",
+		Country:               "BE",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	accountID, err := s.UpsertAccount(ctx, provider.Account{
+		Provider:          "gocardless",
+		ProviderAccountID: "acct_provider",
+		InstitutionID:     institutionID,
+		IBAN:              "BE00000000000000",
+		Currency:          "EUR",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	valueDate := time.Date(2026, 5, 18, 0, 0, 0, 0, time.UTC)
+	_, err = s.UpsertTransaction(ctx, provider.Transaction{
+		ID:                    "tx_export",
+		Provider:              "gocardless",
+		ProviderTransactionID: "tx_provider",
+		AccountID:             accountID,
+		BookingDate:           time.Date(2026, 5, 17, 0, 0, 0, 0, time.UTC),
+		ValueDate:             &valueDate,
+		Amount:                "-12.34",
+		Currency:              "EUR",
+		CounterpartyName:      "Example BV",
+		CounterpartyAccount:   "BE11111111111111",
+		Description:           "Invoice",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 5, 31, 0, 0, 0, 0, time.UTC)
+	rows, err := s.ListTransactions(ctx, TransactionFilter{From: &from, To: &to})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows = %d, want 1", len(rows))
+	}
+	row := rows[0]
+	if row.Date != "2026-05-17" || row.ValueDate != "2026-05-18" || row.IBAN != "BE00000000000000" || row.Institution != "Belfius" || row.TransactionID != "tx_export" {
+		t.Fatalf("export row = %+v", row)
+	}
+}
