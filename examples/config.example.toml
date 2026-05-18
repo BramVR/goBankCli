@@ -1,4 +1,4 @@
-default_provider = "gocardless"
+default_provider = "enablebanking"
 default_country = "BE"
 
 [paths]

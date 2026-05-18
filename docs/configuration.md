@@ -15,7 +15,7 @@ Default paths:
 Example:
 
 ```toml
-default_provider = "gocardless"
+default_provider = "enablebanking"
 default_country = "BE"
 
 [paths]
@@ -36,6 +36,13 @@ Enable Banking credentials use environment variables:
 GOBANKCLI_ENABLEBANKING_APP_ID
 GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH
 GOBANKCLI_ENABLEBANKING_API # optional, defaults to https://api.enablebanking.com
+```
+
+Common local env file:
+
+```bash
+export GOBANKCLI_ENABLEBANKING_APP_ID="<enablebanking-application-id>"
+export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
 ```
 
 Secrets are never written into config by `gobankcli init`.

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -75,7 +76,7 @@ func TestInitForceOverwritesInvalidConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(b), `default_provider = 'gocardless'`) {
+	if !strings.Contains(string(b), `default_provider = 'enablebanking'`) {
 		t.Fatalf("config was not overwritten with defaults:\n%s", b)
 	}
 }
@@ -156,13 +157,13 @@ func TestInstitutionsRejectsUnsupportedProvider(t *testing.T) {
 	}
 }
 
-func TestInstitutionsMissingGoCardlessCredentials(t *testing.T) {
+func TestInstitutionsMissingDefaultEnableBankingCredentials(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv(config.EnvGoCardlessSecretID, "")
-	t.Setenv(config.EnvGoCardlessSecretKey, "")
+	t.Setenv(config.EnvEnableBankingApplicationID, "")
+	t.Setenv(config.EnvEnableBankingPrivateKey, "")
 	var stdout, stderr bytes.Buffer
 	err := Run(context.Background(), []string{"institutions", "--country", "BE"}, "test", &stdout, &stderr)
-	if err == nil || !strings.Contains(err.Error(), "gocardless credentials missing") {
+	if err == nil || !strings.Contains(err.Error(), "enablebanking credentials missing") {
 		t.Fatalf("Run error = %v, want missing credentials", err)
 	}
 	if stdout.Len() != 0 {
@@ -410,6 +411,40 @@ func TestConnectListenRejectsNoInput(t *testing.T) {
 	}
 }
 
+func TestConnectListenHTTPSRequiresListen(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvEnableBankingApplicationID, "app-123")
+	t.Setenv(config.EnvEnableBankingPrivateKey, writeTestRSAKey(t))
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"connect", "--provider", "enablebanking", "--institution", "BE:Belfius", "--redirect", "https://example.test/callback", "--listen-https"}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "listen-https requires listen") {
+		t.Fatalf("Run error = %v, want listen-https rejection", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestConnectListenHTTPSValidatesCertBeforeAuth(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected provider request before TLS validation: %s %s", r.Method, r.URL.Path)
+	}))
+	defer server.Close()
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvEnableBankingApplicationID, "app-123")
+	t.Setenv(config.EnvEnableBankingPrivateKey, writeTestRSAKey(t))
+	t.Setenv(config.EnvEnableBankingAPI, server.URL)
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"connect", "--provider", "enablebanking", "--institution", "BE:Belfius", "--listen", "127.0.0.1:0", "--listen-https", "--listen-cert", filepath.Join(t.TempDir(), "missing.crt"), "--listen-key", filepath.Join(t.TempDir(), "missing.key")}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "no such file") {
+		t.Fatalf("Run error = %v, want missing cert rejection", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
 func TestListenLoopbackPreservesRequestedHost(t *testing.T) {
 	listener, callbackAddress, err := listenLoopback("localhost:0")
 	if err != nil {
@@ -428,11 +463,11 @@ func TestLocalCallbackIgnoresErrorWithWrongState(t *testing.T) {
 	}
 	done := make(chan callbackResult, 1)
 	go func() {
-		callback, err := waitForLocalCallback(context.Background(), listener, "expected-state", 2*time.Second)
+		callback, err := waitForLocalCallback(context.Background(), listener, "expected-state", 2*time.Second, localCallbackTLSConfig{})
 		done <- callbackResult{callback: callback, err: err}
 	}()
 
-	resp, err := http.Get(localCallbackURL(callbackAddress) + "?error=access_denied&state=wrong-state")
+	resp, err := http.Get(localCallbackURL(callbackAddress, false) + "?error=access_denied&state=wrong-state")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -446,7 +481,40 @@ func TestLocalCallbackIgnoresErrorWithWrongState(t *testing.T) {
 	case <-time.After(50 * time.Millisecond):
 	}
 
-	resp, err = http.Get(localCallbackURL(callbackAddress) + "?code=callback-code&state=expected-state")
+	resp, err = http.Get(localCallbackURL(callbackAddress, false) + "?code=callback-code&state=expected-state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("valid callback status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	select {
+	case item := <-done:
+		if item.err != nil {
+			t.Fatal(item.err)
+		}
+		if item.callback.Code != "callback-code" || item.callback.State != "expected-state" {
+			t.Fatalf("callback = %#v", item.callback)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("callback did not complete")
+	}
+}
+
+func TestLocalHTTPSCallbackAcceptsRequest(t *testing.T) {
+	listener, callbackAddress, err := listenLoopback("localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan callbackResult, 1)
+	go func() {
+		callback, err := waitForLocalCallback(context.Background(), listener, "expected-state", 2*time.Second, localCallbackTLSConfig{Enabled: true})
+		done <- callbackResult{callback: callback, err: err}
+	}()
+
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+	resp, err := client.Get(localCallbackURL(callbackAddress, true) + "?code=callback-code&state=expected-state")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,7 +14,11 @@ requested.
 
 - GoCardless Bank Account Data read-only access.
 - Enable Banking AIS read-only access.
-- Short-lived loopback callback listener for Enable Banking authorization.
+- Short-lived HTTPS loopback callback listener for Enable Banking production
+  authorization.
+- HTTPS manual callback exchange as a fallback.
+- Short-lived HTTP loopback callback listener when the provider accepts HTTP
+  loopback redirects.
 - Local SQLite archive with private file permissions.
 - Normalized CSV export to configured paths or explicit `--out` paths.
 - Environment-variable credentials for provider API access.

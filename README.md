@@ -40,6 +40,16 @@ make build
 ./bin/gobankcli --help
 ```
 
+Install the built binary for your user:
+
+```bash
+mkdir -p ~/.local/bin
+install -m 755 ./bin/gobankcli ~/.local/bin/gobankcli
+```
+
+Make sure `~/.local/bin` is on your `PATH`, then use `gobankcli` from any
+terminal.
+
 Run without installing:
 
 ```bash
@@ -48,35 +58,71 @@ go run ./cmd/gobankcli --help
 
 ## Quick Start
 
-Create local config and inspect the setup:
+Build the CLI, create local config, and inspect the setup:
 
 ```bash
-gobankcli init
-gobankcli doctor
-gobankcli --json doctor
+make build
+./bin/gobankcli init
+./bin/gobankcli doctor
 ```
 
-Find Belfius in a provider institution list:
+Use Enable Banking as the main live provider. Create a production application in
+the Enable Banking dashboard with this redirect URL:
 
-```bash
-gobankcli institutions --country BE --query belfius
-gobankcli institutions --provider enablebanking --country BE --query belfius
+```text
+https://127.0.0.1:28787/enablebanking/callback
 ```
 
-Sync after the GoCardless setup below returns a requisition ID:
+Install the downloaded PEM key and set environment variables:
 
 ```bash
-gobankcli accounts --connection REQUISITION_ID
-gobankcli sync --connection REQUISITION_ID --from 2026-01-01
-gobankcli status
-gobankcli export
+mkdir -p ~/.config/gobankcli
+install -m 600 ~/Downloads/<enablebanking-application-id>.pem ~/.config/gobankcli/enablebanking.pem
+
+cat > ~/.config/gobankcli/enablebanking.env <<'EOF'
+export GOBANKCLI_ENABLEBANKING_APP_ID="<enablebanking-application-id>"
+export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
+EOF
+chmod 600 ~/.config/gobankcli/enablebanking.env
+source ~/.config/gobankcli/enablebanking.env
 ```
 
-For Enable Banking, use a short-lived local callback listener:
+Create and trust a local TLS certificate for the callback listener:
 
 ```bash
-gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:8787
-gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
+mkdir -p ~/.config/gobankcli/tls
+chmod 700 ~/.config/gobankcli/tls
+openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
+  -keyout ~/.config/gobankcli/tls/localhost.key \
+  -out ~/.config/gobankcli/tls/localhost.crt \
+  -subj '/CN=127.0.0.1' \
+  -addext 'subjectAltName = IP:127.0.0.1,DNS:localhost'
+chmod 600 ~/.config/gobankcli/tls/localhost.key ~/.config/gobankcli/tls/localhost.crt
+
+security add-trusted-cert -d -r trustRoot -p ssl \
+  -k ~/Library/Keychains/login.keychain-db \
+  ~/.config/gobankcli/tls/localhost.crt
+```
+
+Link your Belfius accounts in the Enable Banking dashboard, then authorize
+`gobankcli` and sync:
+
+```bash
+./bin/gobankcli doctor
+./bin/gobankcli institutions --provider enablebanking --country BE --query belfius
+
+./bin/gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --listen 127.0.0.1:28787 \
+  --listen-https \
+  --listen-cert ~/.config/gobankcli/tls/localhost.crt \
+  --listen-key ~/.config/gobankcli/tls/localhost.key \
+  --callback-timeout 10m
+
+./bin/gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
+./bin/gobankcli status
+./bin/gobankcli export --out ~/Finance/gobankcli/exports/normalized.csv
 ```
 
 Inspect the local archive:
@@ -86,10 +132,157 @@ gobankcli query "select count(*) as transactions from transactions"
 gobankcli query "select booking_date, amount, description from transactions order by booking_date desc limit 20"
 ```
 
+## Enable Banking / Belfius Setup
+
+Enable Banking is the recommended live setup for Belfius. It supports a free
+restricted production mode for your own pre-linked accounts.
+
+1. Create an application in the Enable Banking control panel:
+
+```text
+Environment: Production
+Private key generation: Generate in browser and export private key
+Application name: gobankcli
+Allowed Redirect URL: https://127.0.0.1:28787/enablebanking/callback
+Description: Personal read-only transaction archive
+Data protection email: <your email>
+Privacy Policy URL: https://github.com/BramVR/goBankCli
+Terms of Service URL: https://github.com/BramVR/goBankCli
+```
+
+If Enable Banking rejects the IP-literal redirect URL, use
+`https://localhost:28787/enablebanking/callback` and replace
+`--listen 127.0.0.1:28787` with `--listen localhost:28787`.
+
+2. Save the downloaded PEM key:
+
+```bash
+mkdir -p ~/.config/gobankcli
+install -m 600 ~/Downloads/<enablebanking-application-id>.pem ~/.config/gobankcli/enablebanking.pem
+```
+
+3. Store local environment variables:
+
+```bash
+cat > ~/.config/gobankcli/enablebanking.env <<'EOF'
+export GOBANKCLI_ENABLEBANKING_APP_ID="<enablebanking-application-id>"
+export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
+EOF
+chmod 600 ~/.config/gobankcli/enablebanking.env
+source ~/.config/gobankcli/enablebanking.env
+```
+
+4. Create and trust a local TLS certificate for the automatic callback:
+
+```bash
+mkdir -p ~/.config/gobankcli/tls
+chmod 700 ~/.config/gobankcli/tls
+openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
+  -keyout ~/.config/gobankcli/tls/localhost.key \
+  -out ~/.config/gobankcli/tls/localhost.crt \
+  -subj '/CN=127.0.0.1' \
+  -addext 'subjectAltName = IP:127.0.0.1,DNS:localhost'
+chmod 600 ~/.config/gobankcli/tls/localhost.key ~/.config/gobankcli/tls/localhost.crt
+
+security add-trusted-cert -d -r trustRoot -p ssl \
+  -k ~/Library/Keychains/login.keychain-db \
+  ~/.config/gobankcli/tls/localhost.crt
+```
+
+On non-macOS systems, use your OS trust-store tooling or a tool such as
+`mkcert`. The certificate and key stay local and are used only by the loopback
+callback server.
+
+5. In the Enable Banking dashboard, open the application and use `Link
+   accounts` to link Belfius. Restricted production only returns accounts linked
+   there.
+
+6. Verify credentials and find Belfius:
+
+```bash
+./bin/gobankcli doctor
+./bin/gobankcli institutions --provider enablebanking --country BE --query belfius
+```
+
+Expected credential fields: `set`. Secret values are never printed.
+
+7. Authorize `gobankcli`:
+
+```bash
+./bin/gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --listen 127.0.0.1:28787 \
+  --listen-https \
+  --listen-cert ~/.config/gobankcli/tls/localhost.crt \
+  --listen-key ~/.config/gobankcli/tls/localhost.key \
+  --callback-timeout 10m
+```
+
+The command prints an Enable Banking browser URL. Open it, complete the
+Enable Banking and Belfius authorization screens, then return to the terminal.
+The command exits with:
+
+- `provider_connection_id`: the Enable Banking session ID
+- `connection_id`: the local archive ID
+- `accounts`: number of archived accounts
+
+8. Sync and export:
+
+```bash
+./bin/gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
+./bin/gobankcli status
+./bin/gobankcli export --out ~/Finance/gobankcli/exports/normalized.csv
+```
+
+If credentials are missing, live provider commands fail with
+`enablebanking credentials missing`. Local archive commands such as `status`,
+`export`, and `query` do not need live credentials.
+
+### Manual Callback Fallback
+
+If the local listener cannot be used, keep the same registered local HTTPS
+callback URL and exchange the callback manually:
+
+```bash
+gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --redirect https://127.0.0.1:28787/enablebanking/callback
+
+gobankcli authorize \
+  --provider enablebanking \
+  --url "$ENABLEBANKING_CALLBACK_URL" \
+  --institution BE:Belfius
+```
+
+When no listener is running, the browser may show a local connection error after
+bank consent. Copy the full `https://127.0.0.1:28787/...` callback URL from the
+address bar into `ENABLEBANKING_CALLBACK_URL`. Do not use a third-party URL for
+the redirect because the callback contains authorization parameters.
+
+### HTTP Loopback For Sandbox
+
+For sandbox or another setup where an HTTP loopback redirect is accepted, the
+CLI can also complete the callback without TLS:
+
+```bash
+gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --listen 127.0.0.1:8787
+```
+
+Register `http://127.0.0.1:8787/enablebanking/callback` for that flow. It is
+not the recommended production setup because Enable Banking production redirect
+URLs must be HTTPS.
+
 ## GoCardless / Belfius Setup
 
-This assumes you already have access to GoCardless Bank Account Data and can
-create user secrets in the GoCardless Bank Account Data portal. See the
+GoCardless Bank Account Data is still supported, but Enable Banking is the main
+recommended setup above. This assumes you already have access to GoCardless Bank
+Account Data and can create user secrets in the GoCardless Bank Account Data
+portal. See the
 [GoCardless Bank Account Data quickstart](https://developer.gocardless.com/bank-account-data/quick-start-guide/)
 for the upstream API flow.
 
@@ -100,148 +293,31 @@ export GOBANKCLI_GOCARDLESS_SECRET_ID="..."
 export GOBANKCLI_GOCARDLESS_SECRET_KEY="..."
 ```
 
-2. Confirm credential presence:
+2. Find Belfius:
 
 ```bash
-gobankcli doctor
-```
-
-Expected credential fields: `set`. Secret values are never printed.
-
-3. Find Belfius:
-
-```bash
-gobankcli institutions --country BE --query belfius
+gobankcli institutions --provider gocardless --country BE --query belfius
 ```
 
 Use the provider institution ID from the output, for example
 `BELFIUS_GKCCBEBB`.
 
-4. Create a consent/requisition. Set `GOCARDLESS_REDIRECT_URL` to the browser
+3. Create a consent/requisition. Set `GOCARDLESS_REDIRECT_URL` to the browser
    landing URL you want GoCardless to use after bank authentication:
 
 ```bash
 gobankcli connect \
+  --provider gocardless \
   --institution BELFIUS_GKCCBEBB \
   --redirect "$GOCARDLESS_REDIRECT_URL"
 ```
 
-GoCardless requires this `redirect` URL when creating a requisition.
-`gobankcli` does not read the GoCardless callback; it uses the requisition ID
-from `connect` for later `accounts` and `sync` calls. For one-person manual use,
-the URL only needs to be a valid URL you recognize after the bank flow. Use your
-real landing page if you have one; otherwise use another valid URL you can
-identify as the post-consent landing page.
-
-The command prints:
-
-- `provider_connection_id`: the GoCardless requisition ID
-- `connection_id`: the local archive ID
-- `redirect_url`: URL to open in a browser
-
-5. Open `redirect_url`, complete the bank consent, then list accounts:
+The command prints a GoCardless requisition ID as `provider_connection_id`.
+Open `redirect_url`, complete bank consent, then sync:
 
 ```bash
-gobankcli accounts --connection PROVIDER_CONNECTION_ID
-```
-
-6. Sync transactions:
-
-```bash
-gobankcli sync --connection PROVIDER_CONNECTION_ID --from 2026-01-01
-```
-
-7. Verify and export:
-
-```bash
-gobankcli status
-gobankcli export --out ~/Finance/gobankcli/exports/normalized.csv
-```
-
-If credentials are missing, live provider commands fail with
-`gocardless credentials missing`. Local archive commands such as `status`,
-`export`, and `query` do not need live credentials.
-
-## Enable Banking / Belfius Setup
-
-This assumes an Enable Banking application with read-only account information
-access, application ID, and downloaded RSA private key. Enable Banking requires
-a redirect URL in the authorization request and sends the browser back there
-with `code` and `state`. For the CLI listener flow, register this exact redirect
-URL in your Enable Banking application:
-
-```text
-http://127.0.0.1:8787/enablebanking/callback
-```
-
-1. Set credentials:
-
-```bash
-export GOBANKCLI_ENABLEBANKING_APP_ID="..."
-export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
-```
-
-Optional API override:
-
-```bash
-export GOBANKCLI_ENABLEBANKING_API="https://api.enablebanking.com"
-```
-
-2. Find Belfius:
-
-```bash
-gobankcli institutions --provider enablebanking --country BE --query belfius
-```
-
-Enable Banking institution IDs use `COUNTRY:Name`, for example `BE:Belfius`.
-
-3. Start authorization with a local callback listener:
-
-```bash
-gobankcli connect \
-  --provider enablebanking \
-  --institution BE:Belfius \
-  --listen 127.0.0.1:8787
-```
-
-The command prints the browser URL on stderr, waits for one callback on the
-loopback listener, validates `state`, exchanges the callback `code`, archives
-the session/accounts, then exits. The `provider_connection_id` in the output is
-the Enable Banking session ID to use with `sync`. Because this waits for browser
-consent, it is not available with `--no-input`.
-
-Use the manual fallback only when you intentionally want to handle the callback
-somewhere else, for example on a hosted callback URL you control. In that case,
-the `--redirect` value must be a real URL registered in your Enable Banking
-application. Set `ENABLEBANKING_REDIRECT_URL` to that exact registered URL:
-
-```bash
-gobankcli connect \
-  --provider enablebanking \
-  --institution BE:Belfius \
-  --redirect "$ENABLEBANKING_REDIRECT_URL"
-```
-
-Open `redirect_url`, complete the bank flow, then copy the full callback URL
-from the browser address bar into `ENABLEBANKING_CALLBACK_URL`.
-
-4. Exchange a manual callback:
-
-```bash
-gobankcli authorize \
-  --provider enablebanking \
-  --url "$ENABLEBANKING_CALLBACK_URL" \
-  --institution BE:Belfius
-```
-
-`state` must match the pending connection created by `connect`. The
-`--institution` flag is needed when the provider session response omits ASPSP
-metadata.
-
-5. Sync:
-
-```bash
-gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
+gobankcli accounts --provider gocardless --connection PROVIDER_CONNECTION_ID
+gobankcli sync --provider gocardless --connection PROVIDER_CONNECTION_ID --from 2026-01-01
 ```
 
 ## Output And Automation
@@ -263,13 +339,13 @@ gobankcli --plain status
 Use `--no-input` for cron and agent runs:
 
 ```bash
-GOBANKCLI_GOCARDLESS_SECRET_ID=... \
-GOBANKCLI_GOCARDLESS_SECRET_KEY=... \
-gobankcli --no-input sync --connection PROVIDER_CONNECTION_ID --from 2026-01-01
-
 GOBANKCLI_ENABLEBANKING_APP_ID=... \
 GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH=~/.config/gobankcli/enablebanking.pem \
 gobankcli --no-input sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
+
+GOBANKCLI_GOCARDLESS_SECRET_ID=... \
+GOBANKCLI_GOCARDLESS_SECRET_KEY=... \
+gobankcli --no-input sync --provider gocardless --connection PROVIDER_CONNECTION_ID --from 2026-01-01
 
 gobankcli --no-input export --out ~/Finance/gobankcli/exports/normalized.csv
 ```
@@ -293,7 +369,7 @@ gobankcli export --out /tmp/transactions.csv
 Example config:
 
 ```toml
-default_provider = "gocardless"
+default_provider = "enablebanking"
 default_country = "BE"
 
 [paths]
@@ -318,12 +394,10 @@ country = "BE"
 ```bash
 gobankcli doctor
 gobankcli init
-gobankcli institutions --country BE --query belfius
-gobankcli connect --institution BELFIUS_GKCCBEBB --redirect "$GOCARDLESS_REDIRECT_URL"
-gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:8787
-gobankcli authorize --provider enablebanking --url "$ENABLEBANKING_CALLBACK_URL" --institution BE:Belfius
-gobankcli accounts --connection PROVIDER_CONNECTION_ID
-gobankcli sync --connection PROVIDER_CONNECTION_ID --from 2026-01-01
+gobankcli institutions --provider enablebanking --country BE --query belfius
+gobankcli connect --provider enablebanking --institution BE:Belfius --listen 127.0.0.1:28787 --listen-https --listen-cert ~/.config/gobankcli/tls/localhost.crt --listen-key ~/.config/gobankcli/tls/localhost.key
+gobankcli accounts --provider enablebanking --connection SESSION_ID
+gobankcli sync --provider enablebanking --connection SESSION_ID --from 2026-01-01
 gobankcli status
 gobankcli export --from 2026-01-01 --to 2026-01-31 --out january.csv
 gobankcli query "select count(*) as transactions from transactions"

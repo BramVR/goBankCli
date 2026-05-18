@@ -30,7 +30,7 @@ type Connection struct {
 func Default() Config {
 	return Config{
 		SourcePath:      DefaultConfigPath(),
-		DefaultProvider: "gocardless",
+		DefaultProvider: "enablebanking",
 		DefaultCountry:  "BE",
 		Paths: Paths{
 			DB:      DefaultDBPath(),
@@ -58,7 +58,7 @@ func Load(path string) (Config, error) {
 	}
 	cfg.SourcePath = sourcePath
 	if cfg.DefaultProvider == "" {
-		cfg.DefaultProvider = "gocardless"
+		cfg.DefaultProvider = "enablebanking"
 	}
 	if cfg.DefaultCountry == "" {
 		cfg.DefaultCountry = "BE"

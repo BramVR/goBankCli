@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -20,6 +21,9 @@ type ConnectCmd struct {
 	Institution     string        `help:"Provider institution ID." required:""`
 	RedirectURL     string        `name:"redirect" help:"Redirect URL registered with the provider."`
 	Listen          string        `help:"Listen on a loopback address for one provider callback, e.g. 127.0.0.1:8787."`
+	ListenHTTPS     bool          `name:"listen-https" help:"Serve the local callback listener over HTTPS."`
+	ListenCert      string        `name:"listen-cert" help:"TLS certificate path for --listen-https."`
+	ListenKey       string        `name:"listen-key" help:"TLS private key path for --listen-https."`
 	CallbackTimeout time.Duration `name:"callback-timeout" help:"How long --listen waits for the callback." default:"5m"`
 }
 
@@ -37,6 +41,12 @@ func (c ConnectCmd) Run(ctx context.Context, app *App) error {
 	p, err := newProvider(firstString(c.Provider, app.Config.DefaultProvider))
 	if err != nil {
 		return err
+	}
+	if c.ListenHTTPS && strings.TrimSpace(c.Listen) == "" {
+		return errors.New("listen-https requires listen")
+	}
+	if !c.ListenHTTPS && (strings.TrimSpace(c.ListenCert) != "" || strings.TrimSpace(c.ListenKey) != "") {
+		return errors.New("listen-cert and listen-key require listen-https")
 	}
 	if strings.TrimSpace(c.Listen) != "" {
 		exchanger, ok := p.(enablebanking.SessionExchanger)
@@ -81,7 +91,19 @@ func (c ConnectCmd) runWithLocalCallback(ctx context.Context, app *App, p provid
 		return err
 	}
 	defer listener.Close()
-	redirectURL := localCallbackURL(callbackAddress)
+	redirectURL := localCallbackURL(callbackAddress, c.ListenHTTPS)
+	callbackTLS := localCallbackTLSConfig{
+		Enabled:  c.ListenHTTPS,
+		CertPath: c.ListenCert,
+		KeyPath:  c.ListenKey,
+	}
+	if c.ListenHTTPS {
+		cert, err := localCallbackCertificate(c.ListenCert, c.ListenKey)
+		if err != nil {
+			return err
+		}
+		callbackTLS.Certificate = &cert
+	}
 
 	session, err := p.StartConnection(ctx, c.Institution, redirectURL)
 	if err != nil {
@@ -97,8 +119,13 @@ func (c ConnectCmd) runWithLocalCallback(ctx context.Context, app *App, p provid
 	}
 	fmt.Fprintf(app.Stderr, "Open this URL: %s\n", session.RedirectURL)
 	fmt.Fprintf(app.Stderr, "Waiting for callback on %s\n", redirectURL)
+	if c.ListenHTTPS {
+		if c.ListenCert == "" && c.ListenKey == "" {
+			fmt.Fprintln(app.Stderr, "The browser may show a warning for the temporary localhost certificate.")
+		}
+	}
 
-	callback, err := waitForLocalCallback(ctx, listener, session.Connection.ProviderConnectionID, c.CallbackTimeout)
+	callback, err := waitForLocalCallback(ctx, listener, session.Connection.ProviderConnectionID, c.CallbackTimeout, callbackTLS)
 	if err != nil {
 		return err
 	}
@@ -146,11 +173,22 @@ func listenLoopback(address string) (net.Listener, string, error) {
 	return listener, net.JoinHostPort(host, actualPort), nil
 }
 
-func localCallbackURL(address string) string {
-	return (&url.URL{Scheme: "http", Host: address, Path: "/enablebanking/callback"}).String()
+func localCallbackURL(address string, https bool) string {
+	scheme := "http"
+	if https {
+		scheme = "https"
+	}
+	return (&url.URL{Scheme: scheme, Host: address, Path: "/enablebanking/callback"}).String()
 }
 
-func waitForLocalCallback(ctx context.Context, listener net.Listener, expectedState string, timeout time.Duration) (callbackParams, error) {
+type localCallbackTLSConfig struct {
+	Enabled     bool
+	CertPath    string
+	KeyPath     string
+	Certificate *tls.Certificate
+}
+
+func waitForLocalCallback(ctx context.Context, listener net.Listener, expectedState string, timeout time.Duration, tlsConfig localCallbackTLSConfig) (callbackParams, error) {
 	result := make(chan callbackResult, 1)
 	mux := http.NewServeMux()
 	server := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
@@ -187,8 +225,23 @@ func waitForLocalCallback(ctx context.Context, listener net.Listener, expectedSt
 		default:
 		}
 	})
+	serveListener := listener
+	if tlsConfig.Enabled {
+		cert := tlsConfig.Certificate
+		if cert == nil {
+			loaded, err := localCallbackCertificate(tlsConfig.CertPath, tlsConfig.KeyPath)
+			if err != nil {
+				return callbackParams{}, err
+			}
+			cert = &loaded
+		}
+		serveListener = tls.NewListener(listener, &tls.Config{
+			Certificates: []tls.Certificate{*cert},
+			MinVersion:   tls.VersionTLS12,
+		})
+	}
 	go func() {
-		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(serveListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			select {
 			case result <- callbackResult{err: err}:
 			default:

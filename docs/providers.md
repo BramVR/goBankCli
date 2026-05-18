@@ -17,10 +17,60 @@ Concrete providers normalize API payloads into `internal/provider` models before
 the store layer writes SQLite rows. Money amounts stay decimal strings; provider
 code must not use `float64`.
 
+## Enable Banking
+
+Enable Banking AIS is the recommended concrete provider for live Belfius use.
+Credentials come from:
+
+```bash
+GOBANKCLI_ENABLEBANKING_APP_ID
+GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH
+GOBANKCLI_ENABLEBANKING_API # optional
+```
+
+Requests are signed with RS256 JWTs using the application ID as `kid` and the
+configured RSA private key. Institution IDs are normalized as `COUNTRY:Name`,
+for example `BE:Belfius`.
+
+Enable Banking restricted production requires the accounts to be linked in the
+Enable Banking dashboard before the CLI authorization flow. Production redirect
+URLs must be HTTPS, so the recommended CLI flow is an HTTPS loopback listener:
+
+```bash
+gobankcli connect \
+  --provider enablebanking \
+  --institution BE:Belfius \
+  --listen 127.0.0.1:28787 \
+  --listen-https \
+  --listen-cert ~/.config/gobankcli/tls/localhost.crt \
+  --listen-key ~/.config/gobankcli/tls/localhost.key
+```
+
+Use `https://127.0.0.1:28787/enablebanking/callback` as the registered redirect
+URL. The command posts `/auth`, stores pending `state`, waits for the callback,
+validates `state`, exchanges `code` through `/sessions`, and archives the
+returned session/accounts. The session ID is printed as `provider_connection_id`
+and is used for later `sync`.
+
+Manual callback fallback:
+
+```bash
+gobankcli connect --provider enablebanking --institution BE:Belfius --redirect https://127.0.0.1:28787/enablebanking/callback
+gobankcli authorize --provider enablebanking --url "$ENABLEBANKING_CALLBACK_URL" --institution BE:Belfius
+```
+
+Account archive identity uses `identification_hash` or a non-UID account
+identifier. The provider UID is stored separately as `provider_resource_id` for
+live transaction fetches because UIDs can change across reauthorization.
+
+If a later session response only returns account UIDs, `accounts` and `sync`
+reuse the accounts archived during authorization instead of inventing a stable
+ID. Without archived stable account metadata, live account listing fails
+clearly.
+
 ## GoCardless
 
-GoCardless Bank Account Data is the first concrete provider target. Credentials
-come from:
+GoCardless Bank Account Data is also supported. Credentials come from:
 
 ```bash
 GOBANKCLI_GOCARDLESS_SECRET_ID
@@ -34,36 +84,6 @@ transactions. The CLI wires the provider into `institutions`, `connect`,
 
 Without credentials, live GoCardless commands must fail clearly and never fake a
 successful sync.
-
-## Enable Banking
-
-Enable Banking AIS is the second concrete provider target. Credentials come
-from:
-
-```bash
-GOBANKCLI_ENABLEBANKING_APP_ID
-GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH
-GOBANKCLI_ENABLEBANKING_API # optional
-```
-
-Requests are signed with RS256 JWTs using the application ID as `kid` and the
-configured RSA private key. Institution IDs are normalized as `COUNTRY:Name`,
-for example `BE:Belfius`.
-
-Enable Banking has a two-step consent flow:
-
-- `connect --provider enablebanking` posts `/auth`, stores pending `state`, and
-  prints the browser URL.
-- `authorize --provider enablebanking` validates callback `state`, exchanges
-  `code` through `/sessions`, and archives the returned session/accounts.
-
-Account archive identity uses `identification_hash` or a non-UID account
-identifier. The provider UID is stored separately as `provider_resource_id` for
-live transaction fetches because UIDs can change across reauthorization.
-
-If a later session response only returns account UIDs, `accounts` and `sync`
-reuse the accounts archived during `authorize` instead of inventing a stable ID.
-Without archived stable account metadata, live account listing fails clearly.
 
 ## Future Providers
 
