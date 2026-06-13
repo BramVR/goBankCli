@@ -6,7 +6,19 @@
 bank data through safe provider APIs, stores normalized records in SQLite, and
 exports stable CSV for budgeting and accounting.
 
-It is built for terminals, shell scripts, cron, and coding agents:
+Public docs: [gobankcli.bramvanrompuy.be](https://gobankcli.bramvanrompuy.be/)
+
+Start there for:
+
+- [install](https://gobankcli.bramvanrompuy.be/install.html)
+- [quickstart](https://gobankcli.bramvanrompuy.be/quickstart.html)
+- [provider setup](https://gobankcli.bramvanrompuy.be/provider-setup.html)
+- [archive/query/export usage](https://gobankcli.bramvanrompuy.be/archive-query-export.html)
+- [security model](https://gobankcli.bramvanrompuy.be/security.html)
+
+## What it is
+
+Built for terminals, shell scripts, cron, and coding agents:
 
 - predictable `--json` and `--plain` output on stdout
 - human hints and warnings on stderr
@@ -15,6 +27,14 @@ It is built for terminals, shell scripts, cron, and coding agents:
 - read-only SQL inspection
 - no scraping, payment initiation, bank password storage, or hard-coded secrets
 - no `float64` money values
+
+## Non-goals
+
+- no scraping
+- no payment initiation
+- no bank password storage
+- no cloud upload
+- no real bank data in tests, docs, examples, logs, or commits
 
 ## Current Scope
 
@@ -76,11 +96,12 @@ https://127.0.0.1:28787/enablebanking/callback
 Install the downloaded PEM key and set environment variables:
 
 ```bash
+ENABLEBANKING_APPLICATION_ID="replace-with-your-application-id"
 mkdir -p ~/.config/gobankcli
-install -m 600 ~/Downloads/<enablebanking-application-id>.pem ~/.config/gobankcli/enablebanking.pem
+install -m 600 "$HOME/Downloads/${ENABLEBANKING_APPLICATION_ID}.pem" ~/.config/gobankcli/enablebanking.pem
 
-cat > ~/.config/gobankcli/enablebanking.env <<'EOF'
-export GOBANKCLI_ENABLEBANKING_APP_ID="<enablebanking-application-id>"
+cat > ~/.config/gobankcli/enablebanking.env <<EOF
+export GOBANKCLI_ENABLEBANKING_APP_ID="$ENABLEBANKING_APPLICATION_ID"
 export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
 EOF
 chmod 600 ~/.config/gobankcli/enablebanking.env
@@ -157,15 +178,16 @@ If Enable Banking rejects the IP-literal redirect URL, use
 2. Save the downloaded PEM key:
 
 ```bash
+ENABLEBANKING_APPLICATION_ID="replace-with-your-application-id"
 mkdir -p ~/.config/gobankcli
-install -m 600 ~/Downloads/<enablebanking-application-id>.pem ~/.config/gobankcli/enablebanking.pem
+install -m 600 "$HOME/Downloads/${ENABLEBANKING_APPLICATION_ID}.pem" ~/.config/gobankcli/enablebanking.pem
 ```
 
 3. Store local environment variables:
 
 ```bash
-cat > ~/.config/gobankcli/enablebanking.env <<'EOF'
-export GOBANKCLI_ENABLEBANKING_APP_ID="<enablebanking-application-id>"
+cat > ~/.config/gobankcli/enablebanking.env <<EOF
+export GOBANKCLI_ENABLEBANKING_APP_ID="$ENABLEBANKING_APPLICATION_ID"
 export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enablebanking.pem"
 EOF
 chmod 600 ~/.config/gobankcli/enablebanking.env

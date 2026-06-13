@@ -6,6 +6,8 @@ read_when:
 ---
 # Development
 
+Source: [BramVR/goBankCli](https://github.com/BramVR/goBankCli).
+
 Use the repository Makefile:
 
 ```bash
@@ -28,3 +30,15 @@ frontmatter so the shared docs inventory can route future work.
 The Project Site build renders an explicit allowlist of committed docs into
 `dist/docs-site`. Keep planning, ADR, agent, and research notes off that
 allowlist unless they are intentionally public.
+
+Before opening a docs PR, run:
+
+```bash
+make docs-site
+make docs-site-test
+go test ./...
+go vet ./...
+```
+
+Run the docs inventory helper too when your local workspace has one configured.
+For public docs changes, also audit `dist/docs-site`, README, examples, and changed fixtures for real bank data or credentials.

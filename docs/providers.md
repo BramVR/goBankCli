@@ -6,6 +6,8 @@ read_when:
 ---
 # Providers
 
+This page describes provider internals and implementation expectations. For user setup, start with [Provider Setup](provider-setup.md).
+
 Providers expose read-only bank data through one generic interface:
 
 - list institutions by country

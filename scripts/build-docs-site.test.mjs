@@ -49,6 +49,8 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
 
   const index = fs.readFileSync(path.join(outDir, "index.html"), "utf8");
   const commands = fs.readFileSync(path.join(outDir, "commands.html"), "utf8");
+  const providerSetup = fs.readFileSync(path.join(outDir, "provider-setup.html"), "utf8");
+  const quickstart = fs.readFileSync(path.join(outDir, "quickstart.html"), "utf8");
   const dataModel = fs.readFileSync(path.join(outDir, "data-model.html"), "utf8");
   const llms = fs.readFileSync(path.join(outDir, "llms.txt"), "utf8");
   const llmsFull = fs.readFileSync(path.join(outDir, "llms-full.txt"), "utf8");
@@ -56,7 +58,9 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   assert.match(index, /gobankcli/i);
   assert.match(index, /local-first/i);
   assert.match(index, /https:\/\/gobankcli\.bramvanrompuy\.be\//);
-  assert.match(index, /href="commands\.html"/);
+  assert.match(index, /href="quickstart\.html"/);
+  assert.match(index, /href="install\.html"/);
+  assert.match(index, /href="provider-setup\.html"/);
   assert.match(index, /id="doc-search"/);
   assert.match(index, /data-theme-toggle/);
   assert.match(index, /id="archive-hero-canvas"/);
@@ -64,17 +68,24 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   assert.match(index, /sha384-8FCZ1eVO6it4\+pbec2aDtnTrwjWXZLJRC\+MAGCIPDgsYnUrl\/E0A2YlF8ioMKI\/J/);
   assert.match(index, /sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT/);
   assert.match(index, /class="feature-pill"/);
+  assert.match(providerSetup, /https:\/\/127\.0\.0\.1:28787\/enablebanking\/callback/);
+  assert.match(providerSetup, /Restricted production only returns accounts linked/);
+  assert.match(providerSetup, /GOBANKCLI_GOCARDLESS_SECRET_ID/);
+  assert.match(providerSetup, /Pending transactions are not archived yet/);
+  assert.match(quickstart, /does not scrape/i);
+  assert.match(quickstart, /cloud upload/i);
   assert.match(index, /matchMedia\("\(max-width:960px\)"\)/);
   assert.match(index, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.doesNotMatch(commands, /class="toc-l[23]" href="#[^"]+">#/);
   assert.equal(fs.readFileSync(path.join(outDir, "CNAME"), "utf8").trim(), "gobankcli.bramvanrompuy.be");
 
-  for (const rel of ["sitemap.xml", "robots.txt", "llms.txt", "llms-full.txt", "favicon.svg", "social-card.svg", ".nojekyll"]) {
+  for (const rel of ["sitemap.xml", "robots.txt", "llms.txt", "llms-full.txt", "favicon.svg", "social-card.svg", ".nojekyll", "install.html", "quickstart.html", "provider-setup.html", "archive-query-export.html"]) {
     assert.ok(fs.existsSync(path.join(outDir, rel)), `${rel} should exist`);
   }
 
   assert.match(llms, /Canonical documentation:/);
   assert.match(llmsFull, /# Commands/);
+  assert.match(llmsFull, /# Provider Setup/);
   assert.doesNotMatch(index + llmsFull, /javascript:alert/);
   assert.match(index, /href="https:\/\/example\.com"/);
   assert.doesNotMatch(dataModel, /<p>IBAN\/name\/currency/);

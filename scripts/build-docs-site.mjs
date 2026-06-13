@@ -20,8 +20,11 @@ const cname = readCname();
 const siteBase = cname ? `https://${cname}` : "https://bramvr.github.io/goBankCli";
 
 const sections = [
-  ["Start", ["index.md", "configuration.md", "commands.md", "examples.md"]],
-  ["Concepts", ["architecture.md", "data-model.md", "providers.md", "security.md", "development.md"]],
+  ["Start", ["index.md", "install.md", "quickstart.md"]],
+  ["Setup", ["provider-setup.md", "configuration.md"]],
+  ["Use", ["archive-query-export.md", "commands.md", "examples.md"]],
+  ["Trust", ["security.md", "development.md"]],
+  ["Concepts", ["architecture.md", "data-model.md", "providers.md"]],
 ];
 
 const allowlist = new Set(sections.flatMap(([, rels]) => rels));
@@ -364,7 +367,7 @@ function homeHero() {
           <p class="eyebrow">Local-first · read-only · private by default</p>
           <h1>${productName}</h1>
           <p class="lede">${escapeHtml(productDescription)}</p>
-          <div class="actions"><a class="btn primary" href="configuration.html">Configure</a><a class="btn" href="commands.html">Commands</a><a class="btn" href="security.html">Security model</a><a class="btn" href="${repoBase}">GitHub</a></div>
+          <div class="actions"><a class="btn primary" href="quickstart.html">Quickstart</a><a class="btn" href="install.html">Install</a><a class="btn" href="provider-setup.html">Provider setup</a><a class="btn" href="security.html">Security model</a></div>
           <div class="feature-row" aria-label="Project capabilities">${features.map((feature) => `<span class="feature-pill">${shieldSvg()}${escapeHtml(feature)}</span>`).join("")}</div>
         </div>
         <div class="hero-stage" aria-label="Interactive local bank archive scene">
