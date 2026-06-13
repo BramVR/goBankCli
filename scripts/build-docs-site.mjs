@@ -18,11 +18,28 @@ const productDescription =
 const installHint = "git clone https://github.com/BramVR/goBankCli.git && cd goBankCli && make build";
 const cname = readCname();
 const siteBase = cname ? `https://${cname}` : "https://bramvr.github.io/goBankCli";
+const commandReferencePages = [
+  "commands.md",
+  "commands/accounts.md",
+  "commands/authorize.md",
+  "commands/connect.md",
+  "commands/doctor.md",
+  "commands/export.md",
+  "commands/help.md",
+  "commands/init.md",
+  "commands/institutions.md",
+  "commands/query.md",
+  "commands/sql.md",
+  "commands/status.md",
+  "commands/sync.md",
+  "commands/version.md",
+];
 
 const sections = [
   ["Start", ["index.md", "install.md", "quickstart.md"]],
   ["Setup", ["provider-setup.md", "configuration.md"]],
-  ["Use", ["archive-query-export.md", "commands.md", "examples.md"]],
+  ["Use", ["archive-query-export.md", "examples.md"]],
+  ["Commands", commandReferencePages],
   ["Trust", ["security.md", "development.md"]],
   ["Concepts", ["architecture.md", "data-model.md", "providers.md"]],
 ];
