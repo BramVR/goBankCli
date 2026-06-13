@@ -48,6 +48,7 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   }
 
   const index = fs.readFileSync(path.join(outDir, "index.html"), "utf8");
+  const commands = fs.readFileSync(path.join(outDir, "commands.html"), "utf8");
   const dataModel = fs.readFileSync(path.join(outDir, "data-model.html"), "utf8");
   const llms = fs.readFileSync(path.join(outDir, "llms.txt"), "utf8");
   const llmsFull = fs.readFileSync(path.join(outDir, "llms-full.txt"), "utf8");
@@ -56,6 +57,16 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   assert.match(index, /local-first/i);
   assert.match(index, /https:\/\/gobankcli\.bramvanrompuy\.be\//);
   assert.match(index, /href="commands\.html"/);
+  assert.match(index, /id="doc-search"/);
+  assert.match(index, /data-theme-toggle/);
+  assert.match(index, /id="archive-hero-canvas"/);
+  assert.match(index, /three@0\.184\.0\/build\/three\.module\.js/);
+  assert.match(index, /sha384-8FCZ1eVO6it4\+pbec2aDtnTrwjWXZLJRC\+MAGCIPDgsYnUrl\/E0A2YlF8ioMKI\/J/);
+  assert.match(index, /sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT/);
+  assert.match(index, /class="feature-pill"/);
+  assert.match(index, /matchMedia\("\(max-width:960px\)"\)/);
+  assert.match(index, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.doesNotMatch(commands, /class="toc-l[23]" href="#[^"]+">#/);
   assert.equal(fs.readFileSync(path.join(outDir, "CNAME"), "utf8").trim(), "gobankcli.bramvanrompuy.be");
 
   for (const rel of ["sitemap.xml", "robots.txt", "llms.txt", "llms-full.txt", "favicon.svg", "social-card.svg", ".nojekyll"]) {

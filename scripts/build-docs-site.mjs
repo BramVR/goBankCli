@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { brandMarkSvg, css, faviconSvg, socialCardSvg } from "./docs-site-assets.mjs";
+import { brandMarkSvg, css, faviconSvg, js, preThemeScript, shieldSvg, socialCardSvg, themeToggleHtml, threeHeroModule } from "./docs-site-assets.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDir, "..");
@@ -207,7 +207,11 @@ function markdownToHtml(markdown, currentRel) {
       const level = heading[1].length;
       const text = heading[2].trim();
       const id = slug(text);
-      html.push(`<h${level} id="${id}">${inline(text, currentRel)}</h${level}>`);
+      if (level === 1) {
+        html.push(`<h1 id="${id}">${inline(text, currentRel)}</h1>`);
+      } else {
+        html.push(`<h${level} id="${id}"><a class="anchor" href="#${id}" aria-label="Anchor link">#</a>${inline(text, currentRel)}</h${level}>`);
+      }
       continue;
     }
     if (line.trimStart().startsWith("|") && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(lines[idx + 1] || "")) {
@@ -273,7 +277,10 @@ function rewriteHref(href, currentRel) {
 function tocFromHtml(html) {
   const items = [];
   for (const match of html.matchAll(/<h([23]) id="([^"]+)">([\s\S]*?)<\/h[23]>/g)) {
-    items.push({ level: Number(match[1]), id: match[2], text: match[3].replace(/<[^>]+>/g, "") });
+    const text = match[3]
+      .replace(/<a\b(?=[^>]*class="[^"]*\banchor\b[^"]*")[\s\S]*?<\/a>/g, "")
+      .replace(/<[^>]+>/g, "");
+    items.push({ level: Number(match[1]), id: match[2], text });
   }
   if (items.length < 2) return "";
   return `<aside class="toc"><h2>On this page</h2>${items.map((item) => `<a class="toc-l${item.level}" href="#${item.id}">${escapeHtml(item.text)}</a>`).join("")}</aside>`;
@@ -295,7 +302,7 @@ function layout({ page, html, toc, prev, next, sectionName }) {
   <meta name="description" content="${escapeAttr(description)}">
   <link rel="canonical" href="${escapeAttr(canonicalUrl)}">
   <meta name="robots" content="index, follow">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#1d4ed8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${productName}">
   <meta property="og:title" content="${escapeAttr(title)}">
@@ -308,16 +315,26 @@ function layout({ page, html, toc, prev, next, sectionName }) {
   <meta name="twitter:image" content="${escapeAttr(socialImage)}">
   <script type="application/ld+json">${jsonLd({ page, home, canonicalUrl, description })}</script>
   <link rel="icon" href="${rootPrefix}favicon.svg" type="image/svg+xml">
+  <script>${preThemeScript()}</script>
   <style>${css()}</style>
 </head>
-<body>
+<body${home ? ' class="home"' : ""}>
+  <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+    <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+  </button>
+  ${themeToggleHtml("theme-float")}
   <div class="shell">
     <aside class="sidebar">
-      <a class="brand" href="${hrefToOutRel("index.html", page.outRel)}" aria-label="${productName} docs home">
-        <span class="mark">${brandMarkSvg()}</span>
-        <span><strong>${productName}</strong><small>bank archive CLI</small></span>
-      </a>
+      <div class="sidebar-head">
+        <a class="brand" href="${hrefToOutRel("index.html", page.outRel)}" aria-label="${productName} docs home">
+          <span class="mark">${brandMarkSvg()}</span>
+          <span><strong>${productName}</strong><small>bank archive CLI</small></span>
+        </a>
+        ${themeToggleHtml()}
+      </div>
+      <label class="search"><span>Search</span><input id="doc-search" type="search" placeholder="sync, export, security"></label>
       <nav>${navHtml(page)}</nav>
+      <p class="no-results">No matching pages.</p>
     </aside>
     <main>
       ${home ? homeHero() : standardHero(page, sectionName)}
@@ -327,12 +344,33 @@ function layout({ page, html, toc, prev, next, sectionName }) {
       </div>
     </main>
   </div>
+  <script>${js()}</script>
+  ${home ? `<script type="module">${threeHeroModule()}</script>` : ""}
 </body>
 </html>`;
 }
 
 function homeHero() {
-  return `<header class="hero"><p class="eyebrow">Local-first · read-only · SQLite</p><h1>${productName}</h1><p class="lede">${escapeHtml(productDescription)}</p><div class="actions"><a class="btn primary" href="configuration.html">Configure</a><a class="btn" href="commands.html">Commands</a><a class="btn" href="${repoBase}">GitHub</a></div></header>`;
+  const features = [
+    "Provider APIs",
+    "SQLite archive",
+    "Stable CSV",
+    "Read-only SQL",
+    "No scraping",
+    "No payments",
+  ];
+  return `<header class="home-hero">
+        <div>
+          <p class="eyebrow">Local-first · read-only · private by default</p>
+          <h1>${productName}</h1>
+          <p class="lede">${escapeHtml(productDescription)}</p>
+          <div class="actions"><a class="btn primary" href="configuration.html">Configure</a><a class="btn" href="commands.html">Commands</a><a class="btn" href="security.html">Security model</a><a class="btn" href="${repoBase}">GitHub</a></div>
+          <div class="feature-row" aria-label="Project capabilities">${features.map((feature) => `<span class="feature-pill">${shieldSvg()}${escapeHtml(feature)}</span>`).join("")}</div>
+        </div>
+        <div class="hero-stage" aria-label="Interactive local bank archive scene">
+          <canvas id="archive-hero-canvas"></canvas>
+        </div>
+      </header>`;
 }
 
 function standardHero(page, sectionName) {
