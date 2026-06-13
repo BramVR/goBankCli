@@ -1,4 +1,4 @@
-.PHONY: build test fmt lint ci clean docs-site docs-site-test docs-site-clean gobankcli
+.PHONY: build test fmt lint ci clean docs-commands docs-test docs-site docs-site-test docs-site-clean gobankcli
 
 build:
 	go build -o bin/gobankcli ./cmd/gobankcli
@@ -12,7 +12,13 @@ fmt:
 lint:
 	go vet ./...
 
-ci: fmt lint test
+ci: fmt lint docs-test docs-site-test test
+
+docs-commands:
+	go run ./cmd/gobankcli docs-command-reference | node scripts/gen-command-reference.mjs
+
+docs-test:
+	node --test scripts/*.test.mjs
 
 clean:
 	rm -rf bin

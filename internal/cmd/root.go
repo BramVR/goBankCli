@@ -35,6 +35,8 @@ type CLI struct {
 	SQL          SQLCmd          `cmd:"" help:"Alias for query."`
 	Status       StatusCmd       `cmd:"" help:"Show local archive status."`
 	Sync         SyncCmd         `cmd:"" help:"Fetch and archive transactions for a connection."`
+
+	DocsCommandReference DocsCommandReferenceCmd `cmd:"" name:"docs-command-reference" hidden:"" help:"Emit command reference metadata."`
 }
 
 type App struct {
@@ -54,11 +56,7 @@ func Run(ctx context.Context, args []string, version string, stdout, stderr io.W
 	}
 
 	var cli CLI
-	parser, err := kong.New(&cli,
-		kong.Name("gobankcli"),
-		kong.Description("Local-first read-only bank transaction archive."),
-		kong.UsageOnError(),
-	)
+	parser, err := newParser(&cli)
 	if err != nil {
 		return err
 	}
@@ -73,6 +71,9 @@ func Run(ctx context.Context, args []string, version string, stdout, stderr io.W
 	}
 	if cli.JSON && cli.Plain {
 		return errors.New("--json and --plain cannot be used together")
+	}
+	if kctx.Command() == "docs-command-reference" {
+		return emitCommandReference(parser, stdout)
 	}
 
 	cfg, err := config.Load(cli.Config)
@@ -110,6 +111,14 @@ func Run(ctx context.Context, args []string, version string, stdout, stderr io.W
 	kctx.Bind(app)
 	kctx.BindTo(ctx, (*context.Context)(nil))
 	return kctx.Run()
+}
+
+func newParser(cli *CLI) (*kong.Kong, error) {
+	return kong.New(cli,
+		kong.Name("gobankcli"),
+		kong.Description("Local-first read-only bank transaction archive."),
+		kong.UsageOnError(),
+	)
 }
 
 func hasVersionFlag(args []string) bool {
