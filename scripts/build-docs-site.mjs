@@ -372,24 +372,24 @@ function layout({ page, html, toc, prev, next, sectionName }) {
 
 function homeHero() {
   const features = [
-    "Provider APIs",
-    "SQLite archive",
-    "Stable CSV",
-    "Read-only SQL",
-    "No scraping",
-    "No payments",
+    ["Provider APIs", "provider-setup.html"],
+    ["SQLite archive", "archive-query-export.html#archive-shape"],
+    ["Stable CSV", "archive-query-export.html#export-csv"],
+    ["Read-only SQL", "commands/sql.html"],
+    ["No scraping", "security.html#not-supported"],
+    ["No payments", "security.html#not-supported"],
   ];
   return `<header class="home-hero">
         <div>
           <p class="eyebrow">Local-first · read-only · private by default</p>
           <h1>${productName}</h1>
           <p class="lede">${escapeHtml(productDescription)}</p>
-          <div class="actions"><a class="btn primary" href="quickstart.html">Quickstart</a><a class="btn" href="install.html">Install</a><a class="btn" href="provider-setup.html">Provider setup</a><a class="btn" href="security.html">Security model</a></div>
-          <div class="feature-row" aria-label="Project capabilities">${features.map((feature) => `<span class="feature-pill">${shieldSvg()}${escapeHtml(feature)}</span>`).join("")}</div>
+          <div class="actions"><a class="btn primary" href="quickstart.html">Quickstart</a><a class="btn" href="install.html">Install</a><a class="btn" href="${repoBase}" rel="noopener">GitHub</a></div>
         </div>
         <div class="hero-stage" aria-label="Interactive local bank archive scene">
           <canvas id="archive-hero-canvas"></canvas>
         </div>
+        <div class="feature-row" aria-label="Project capabilities">${features.map(([feature, href]) => `<a class="feature-pill" href="${href}">${shieldSvg()}${escapeHtml(feature)}</a>`).join("")}</div>
       </header>`;
 }
 
