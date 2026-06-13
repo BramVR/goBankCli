@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"gobankcli/internal/archive"
 	"gobankcli/internal/provider"
 	"gobankcli/internal/provider/enablebanking"
 	"gobankcli/internal/store"
@@ -79,22 +80,10 @@ func completeAuthorization(ctx context.Context, app *App, p provider.Provider, e
 	if err != nil {
 		return authorizeReport{}, err
 	}
-	archivedInstitutions := map[string]bool{}
-	for i := range accounts {
-		if accounts[i].InstitutionID == "" {
-			accounts[i].InstitutionID = session.Connection.InstitutionID
-		}
-		if !archivedInstitutions[accounts[i].InstitutionID] {
-			countries := institutionArchiveCountries(app.Config, p.Name(), accounts[i].InstitutionID)
-			if err := archiveInstitutionByID(ctx, p, s, countries, accounts[i].InstitutionID); err != nil {
-				return authorizeReport{}, err
-			}
-			archivedInstitutions[accounts[i].InstitutionID] = true
-		}
-		accounts[i].ConnectionID = connectionID
-		if _, err := s.UpsertAccount(ctx, accounts[i]); err != nil {
-			return authorizeReport{}, err
-		}
+	manager := archive.NewManager(app.Config, p, s)
+	accounts, err = manager.ArchiveConnectionAccounts(ctx, connectionID, session.Connection, accounts)
+	if err != nil {
+		return authorizeReport{}, err
 	}
 	return authorizeReport{
 		ProviderConnectionID: session.Connection.ProviderConnectionID,
