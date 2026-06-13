@@ -6,6 +6,8 @@ read_when:
 ---
 # Examples
 
+These snippets use placeholders and synthetic dates. Do not paste real bank data, copied bank exports, live credentials, or callback URLs containing authorization parameters into docs, tickets, logs, or commits.
+
 ## First-Time Setup
 
 ```bash
@@ -107,6 +109,8 @@ gobankcli status
 ```
 
 Use `--from` and `--to` to restrict booking dates.
+
+Only booked transactions are archived. Pending transactions are ignored for now.
 
 ## Export
 

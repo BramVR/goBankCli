@@ -6,6 +6,8 @@ read_when:
 ---
 # Configuration
 
+Configuration controls local paths and provider defaults. Provider secrets stay in environment variables, not in `config.toml`.
+
 Default paths:
 
 - config: `~/.config/gobankcli/config.toml`
@@ -47,6 +49,8 @@ export GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH="$HOME/.config/gobankcli/enableb
 
 Secrets are never written into config by `gobankcli init`.
 
+Run `gobankcli doctor` after editing config. It reports only provider credential presence, never secret values.
+
 Connection entries are optional operator hints for docs and institution
 archiving. Example Enable Banking entry:
 
@@ -57,3 +61,5 @@ provider = "enablebanking"
 institution_id = "BE:Belfius"
 country = "BE"
 ```
+
+Provider-specific setup is covered in [Provider Setup](provider-setup.md).

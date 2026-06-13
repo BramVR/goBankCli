@@ -10,6 +10,8 @@ read_when:
 flows, stores a private local archive, and exports data only when explicitly
 requested.
 
+The short version: your archive is a local file, provider secrets come from environment variables, and public docs/examples must stay synthetic.
+
 ## Supported
 
 - GoCardless Bank Account Data read-only access.
@@ -30,6 +32,8 @@ requested.
 - Reverse-engineered private bank endpoints.
 - Payment initiation.
 - Bank password storage.
+- Cloud upload of the archive.
+- Real bank data in tests, docs, examples, logs, screenshots, public artifacts, or commits.
 - Public dashboard or long-running web server.
 
 ## Credentials
@@ -69,6 +73,16 @@ directories are created with `0700`; config and export files are written with
 Raw provider JSON is preserved in SQLite so normalization can improve later.
 It may include private account or transaction metadata. Command reports omit raw
 payloads unless a local read-only SQL query explicitly selects them.
+
+## Public Artifact Rule
+
+Before publishing docs or PR artifacts, check generated site output, README snippets, fixtures, logs, and screenshots for:
+
+- real names, IBANs, account IDs, card numbers, balances, and transaction descriptions
+- provider credentials, PEM keys, callback URLs with `code` or `state`, and session IDs copied from real flows
+- private bank endpoints, browser session data, and credential-bearing logs
+
+Safe examples use placeholders such as `SESSION_ID`, `REQUISITION_ID`, `<secret-id>`, and synthetic dates.
 
 ## Consent Renewal
 
