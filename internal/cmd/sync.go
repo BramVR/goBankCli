@@ -5,8 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"gobankcli/internal/provider"
-	"gobankcli/internal/provider/enablebanking"
+	"gobankcli/internal/archive"
 	"gobankcli/internal/store"
 )
 
@@ -52,73 +51,17 @@ func (c SyncCmd) Run(ctx context.Context, app *App) error {
 		return err
 	}
 	defer s.Close()
-	accounts, fresh, err := accountsForConnection(ctx, p, s, providerName, c.Connection)
+	manager := archive.NewManager(app.Config, p, s)
+	result, err := manager.SyncConnection(ctx, c.Connection, valueOrZero(from), valueOrZero(to))
 	if err != nil {
 		return err
 	}
-
-	seen := 0
 	localConnectionID := store.LocalConnectionID(providerName, c.Connection)
-	archivedInstitutions := map[string]bool{}
-	for _, account := range accounts {
-		started := time.Now().UTC()
-		providerResourceID := account.ProviderResourceID
-		if providerResourceID == "" {
-			providerResourceID = account.ProviderAccountID
-		}
-		localID := account.ID
-		if fresh {
-			if !archivedInstitutions[account.InstitutionID] {
-				countries := institutionArchiveCountries(app.Config, providerName, account.InstitutionID)
-				if err := archiveInstitutionByID(ctx, p, s, countries, account.InstitutionID); err != nil {
-					return err
-				}
-				archivedInstitutions[account.InstitutionID] = true
-			}
-			account.ConnectionID = localConnectionID
-			localID, err = s.UpsertAccount(ctx, account)
-			if err != nil {
-				return err
-			}
-		}
-		if localID == "" {
-			return errors.New("stored account missing local id")
-		}
-		transactions, err := p.FetchTransactions(ctx, providerResourceID, valueOrZero(from), valueOrZero(to))
-		if err != nil {
-			return err
-		}
-		newCount := 0
-		for _, tx := range transactions {
-			tx.AccountID = localID
-			result, err := s.UpsertTransactionResult(ctx, tx)
-			if err != nil {
-				return err
-			}
-			if result.Inserted {
-				newCount++
-			}
-			seen++
-		}
-		finished := time.Now().UTC()
-		if _, err := s.InsertSyncRun(ctx, provider.SyncRun{
-			Provider:         providerName,
-			ConnectionID:     localConnectionID,
-			AccountID:        localID,
-			StartedAt:        started,
-			FinishedAt:       &finished,
-			Status:           "ok",
-			TransactionsNew:  int64(newCount),
-			TransactionsSeen: int64(len(transactions)),
-		}); err != nil {
-			return err
-		}
-	}
 	return app.Out.Write(syncReport{
 		ProviderConnectionID: c.Connection,
 		ConnectionID:         localConnectionID,
-		Accounts:             len(accounts),
-		TransactionsSeen:     seen,
+		Accounts:             result.Accounts,
+		TransactionsSeen:     result.TransactionsSeen,
 	})
 }
 
@@ -127,22 +70,4 @@ func valueOrZero(t *time.Time) time.Time {
 		return time.Time{}
 	}
 	return *t
-}
-
-func accountsForConnection(ctx context.Context, p provider.Provider, s *store.Store, providerName, providerConnectionID string) ([]provider.Account, bool, error) {
-	accounts, err := p.ListAccounts(ctx, providerConnectionID)
-	if err == nil {
-		return accounts, true, nil
-	}
-	if providerName != enablebanking.Name || !errors.Is(err, enablebanking.ErrMissingStableAccountID) {
-		return nil, false, err
-	}
-	stored, storedErr := s.AccountsByConnection(ctx, store.LocalConnectionID(providerName, providerConnectionID))
-	if storedErr != nil {
-		return nil, false, storedErr
-	}
-	if len(stored) == 0 {
-		return nil, false, err
-	}
-	return stored, false, nil
 }

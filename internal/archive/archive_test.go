@@ -135,6 +135,58 @@ func TestManagerReusesStoredAccountsWhenStableAccountIDMissing(t *testing.T) {
 	}
 }
 
+func TestManagerSyncConnectionArchivesFreshAccountTransactions(t *testing.T) {
+	ctx := context.Background()
+	s, err := store.Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	p := &fakeProvider{
+		name: "example",
+		institutions: map[string][]provider.Institution{
+			"BE": {{Provider: "example", ProviderInstitutionID: "BANK_BE", Name: "Bank BE", Country: "BE"}},
+		},
+		accounts: []provider.Account{{
+			Provider:           "example",
+			ProviderAccountID:  "stable-account",
+			ProviderResourceID: "resource-account",
+			InstitutionID:      "BANK_BE",
+		}},
+		transactions: []provider.Transaction{{
+			Provider:              "example",
+			ProviderTransactionID: "tx-1",
+			BookingDate:           time.Date(2026, 5, 2, 0, 0, 0, 0, time.UTC),
+			Amount:                "12.34",
+			Currency:              "EUR",
+		}},
+	}
+	manager := NewManager(config.Config{DefaultCountry: "BE"}, p, s)
+
+	result, err := manager.SyncConnection(ctx, "conn-1", time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 5, 31, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Accounts != 1 || result.TransactionsSeen != 1 {
+		t.Fatalf("sync result = %+v", result)
+	}
+	if p.fetchAccountIDs[0] != "resource-account" {
+		t.Fatalf("fetched account id = %q, want provider resource id", p.fetchAccountIDs[0])
+	}
+	rows, err := s.Query(ctx, "select a.connection_id, t.account_id, r.transactions_new, r.transactions_seen from accounts a join transactions t on t.account_id = a.id join sync_runs r on r.account_id = a.id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows.Rows) != 1 {
+		t.Fatalf("sync rows = %+v", rows.Rows)
+	}
+	row := rows.Rows[0]
+	if row[0] != store.LocalConnectionID("example", "conn-1") || row[2] != "1" || row[3] != "1" {
+		t.Fatalf("sync rows = %+v", rows.Rows)
+	}
+}
+
 func TestArchiveCountriesPreferMatchingConnectionBeforeDefault(t *testing.T) {
 	cfg := config.Config{
 		DefaultCountry: "BE",
@@ -154,8 +206,10 @@ type fakeProvider struct {
 	name            string
 	institutions    map[string][]provider.Institution
 	accounts        []provider.Account
+	transactions    []provider.Transaction
 	listAccountsErr error
 	countriesSeen   []string
+	fetchAccountIDs []string
 }
 
 func (p *fakeProvider) Name() string { return p.name }
@@ -181,5 +235,6 @@ func (p *fakeProvider) ListAccounts(context.Context, string) ([]provider.Account
 }
 
 func (p *fakeProvider) FetchTransactions(_ context.Context, accountID string, _, _ time.Time) ([]provider.Transaction, error) {
-	return nil, errors.New("not implemented")
+	p.fetchAccountIDs = append(p.fetchAccountIDs, accountID)
+	return p.transactions, nil
 }
