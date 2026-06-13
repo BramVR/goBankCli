@@ -92,3 +92,42 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   assert.doesNotMatch(index + llms + llmsFull, /INTERNAL_ONLY_SENTINEL_REAL_BANK_EXPORT/);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
+
+test("home hero renders short CTAs and linked capability pills", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gobankcli-docs-site-home-"));
+  const outDir = path.join(tempRoot, "out");
+  fs.cpSync(path.join(root, "docs"), path.join(tempRoot, "docs"), { recursive: true });
+
+  try {
+    execFileSync("make", ["docs-site"], {
+      cwd: root,
+      env: {
+        ...process.env,
+        GOBANKCLI_DOCS_SITE_ROOT: tempRoot,
+        GOBANKCLI_DOCS_SITE_OUT: outDir,
+        TMPDIR: os.tmpdir(),
+      },
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+
+    const index = fs.readFileSync(path.join(outDir, "index.html"), "utf8");
+    const hero = index.match(/<header class="home-hero">([\s\S]*?)<\/header>/)?.[1] || "";
+    const actions = hero.match(/<div class="actions">([\s\S]*?)<\/div>/)?.[1] || "";
+    const ctaLabels = [...actions.matchAll(/<a\b[^>]*class="btn[^"]*"[^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
+    assert.deepEqual(ctaLabels, ["Quickstart", "Install", "GitHub"]);
+    assert.match(actions, /<a class="btn primary" href="quickstart\.html">Quickstart<\/a>/);
+    assert.doesNotMatch(actions, /Provider setup|Security model/);
+
+    const featureLinks = [...hero.matchAll(/<a\b[^>]*class="feature-pill"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)];
+    assert.ok(featureLinks.length >= 6, "all capability pills should be anchors");
+    for (const [href] of featureLinks.map((match) => [match[1]])) {
+      assert.match(href, /^(quickstart|provider-setup|archive-query-export|commands\/sql|security)\.html(?:#[a-z0-9-]+)?$/);
+      assert.ok(fs.existsSync(path.join(outDir, href.split("#")[0])), `${href} should point at a generated docs page`);
+    }
+    assert.equal((hero.match(/class="feature-pill"/g) || []).length, featureLinks.length);
+    assert.doesNotMatch(hero, /<span class="feature-pill"/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
