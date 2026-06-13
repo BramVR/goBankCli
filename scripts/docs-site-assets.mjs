@@ -3,6 +3,7 @@ export function css() {
 :root{color-scheme:light;--bg:#f7f9fb;--paper:#fff;--ink:#152033;--text:#334155;--muted:#64748b;--line:#dbe4ee;--soft:#eaf3f1;--accent:#0f766e;--accent-2:#2563eb;--code:#0f172a}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.65}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline;text-underline-offset:.18em}
 .shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}

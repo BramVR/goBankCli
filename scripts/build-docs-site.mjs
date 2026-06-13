@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { brandMarkSvg, css, faviconSvg, socialCardSvg } from "./docs-site-assets.mjs";
 
-const root = process.cwd();
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const defaultRoot = path.resolve(scriptDir, "..");
+const root = path.resolve(process.env.GOBANKCLI_DOCS_SITE_ROOT || defaultRoot);
 const docsDir = path.join(root, "docs");
-const outDir = path.join(root, "dist", "docs-site");
+const outDir = path.resolve(process.env.GOBANKCLI_DOCS_SITE_OUT || path.join(root, "dist", "docs-site"));
 const repoBase = "https://github.com/BramVR/goBankCli";
 const repoEditBase = `${repoBase}/edit/main/docs`;
 const productName = "gobankcli";
@@ -61,7 +64,7 @@ function loadPages() {
     const rel = path.relative(docsDir, file).replaceAll(path.sep, "/");
     const raw = fs.readFileSync(file, "utf8");
     const { frontmatter, body } = parseFrontmatter(raw);
-    const markdown = stripDirectives(body);
+    const markdown = sanitizeUnsafeMarkdownLinks(stripDirectives(body));
     return {
       file,
       rel,
@@ -104,6 +107,13 @@ function stripDirectives(body) {
     .filter((line) => !/^\s*\{:\s*[^}]*\}\s*$/.test(line))
     .map((line) => line.replace(/\s*\{:\s*[^}]*\}\s*$/, ""))
     .join("\n");
+}
+
+function sanitizeUnsafeMarkdownLinks(markdown) {
+  return markdown.replace(/\]\(\s*([A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^)]*\)/g, (match, scheme) => {
+    if (/^(https?:|mailto:|tel:)$/i.test(scheme)) return match;
+    return "](#)";
+  });
 }
 
 function allMarkdown(dir) {

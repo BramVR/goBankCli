@@ -4,18 +4,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(import.meta.dirname, "..");
-const outDir = path.join(root, "dist", "docs-site");
-const internalDoc = path.join(root, "docs", "research.md");
-const homeDoc = path.join(root, "docs", "index.md");
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(scriptDir, "..");
 
 test("docs-site builds public project-site artifact from allowlisted docs", () => {
-  fs.rmSync(outDir, { recursive: true, force: true });
-  const priorInternalDoc = fs.existsSync(internalDoc) ? fs.readFileSync(internalDoc, "utf8") : null;
-  const priorHomeDoc = fs.readFileSync(homeDoc, "utf8");
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gobankcli-docs-site-"));
+  const outDir = path.join(tempRoot, "out");
+  const tempDocs = path.join(tempRoot, "docs");
+  fs.cpSync(path.join(root, "docs"), tempDocs, { recursive: true });
   fs.writeFileSync(
-    internalDoc,
+    path.join(tempDocs, "research.md"),
     [
       "---",
       'summary: "Internal planning sentinel."',
@@ -29,19 +29,22 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
     ].join("\n"),
     "utf8",
   );
-  fs.writeFileSync(homeDoc, `${priorHomeDoc}\n\n[Unsafe link](javascript:alert(1))\n`, "utf8");
+  fs.appendFileSync(path.join(tempDocs, "index.md"), "\n\n[Unsafe link](javascript:alert(1))\n[Safe link](https://example.com)\n", "utf8");
 
   try {
     execFileSync("make", ["docs-site"], {
       cwd: root,
-      env: { ...process.env, TMPDIR: os.tmpdir() },
+      env: {
+        ...process.env,
+        GOBANKCLI_DOCS_SITE_ROOT: tempRoot,
+        GOBANKCLI_DOCS_SITE_OUT: outDir,
+        TMPDIR: os.tmpdir(),
+      },
       encoding: "utf8",
       stdio: "pipe",
     });
   } finally {
-    if (priorInternalDoc === null) fs.rmSync(internalDoc, { force: true });
-    else fs.writeFileSync(internalDoc, priorInternalDoc, "utf8");
-    fs.writeFileSync(homeDoc, priorHomeDoc, "utf8");
+    process.once("exit", () => fs.rmSync(tempRoot, { recursive: true, force: true }));
   }
 
   const index = fs.readFileSync(path.join(outDir, "index.html"), "utf8");
@@ -61,7 +64,9 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
 
   assert.match(llms, /Canonical documentation:/);
   assert.match(llmsFull, /# Commands/);
-  assert.doesNotMatch(index, /javascript:alert/);
+  assert.doesNotMatch(index + llmsFull, /javascript:alert/);
+  assert.match(index, /href="https:\/\/example\.com"/);
   assert.doesNotMatch(dataModel, /<p>IBAN\/name\/currency/);
   assert.doesNotMatch(index + llms + llmsFull, /INTERNAL_ONLY_SENTINEL_REAL_BANK_EXPORT/);
+  fs.rmSync(tempRoot, { recursive: true, force: true });
 });
