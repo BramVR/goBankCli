@@ -185,6 +185,93 @@ func TestInstitutionsMissingEnableBankingCredentials(t *testing.T) {
 	}
 }
 
+func TestAccountsEnableBankingArchivesAndKeepsOutputShape(t *testing.T) {
+	var sawConfiguredCountry bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/sessions/session-1":
+			writeCmdJSON(t, w, map[string]any{
+				"session_id": "session-1",
+				"status":     "AUTHORIZED",
+				"aspsp":      map[string]string{"name": "Belfius", "country": "NL"},
+				"accounts": []map[string]any{{
+					"uid":                 "session-account-uid",
+					"identification_hash": "stable-hash",
+					"name":                "Current",
+					"currency":            "EUR",
+					"account_id":          map[string]string{"iban": "NL00BANK0000000000"},
+				}},
+			})
+		case "/aspsps":
+			if got := r.URL.Query().Get("country"); got != "NL" {
+				http.Error(w, "unexpected country "+got, http.StatusInternalServerError)
+				return
+			}
+			sawConfiguredCountry = true
+			writeCmdJSON(t, w, map[string]any{"aspsps": []map[string]any{{
+				"name":    "Belfius",
+				"country": "NL",
+			}}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	home := t.TempDir()
+	dbPath := filepath.Join(home, "archive.db")
+	configPath := filepath.Join(home, "config.toml")
+	if err := os.WriteFile(configPath, []byte(`
+default_provider = 'enablebanking'
+default_country = 'BE'
+
+[paths]
+db = '`+dbPath+`'
+exports = '`+filepath.Join(home, "exports")+`'
+
+[[connections]]
+provider = 'enablebanking'
+institution_id = 'NL:Belfius'
+country = 'NL'
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	t.Setenv(config.EnvEnableBankingApplicationID, "app-123")
+	t.Setenv(config.EnvEnableBankingPrivateKey, writeTestRSAKey(t))
+	t.Setenv(config.EnvEnableBankingAPI, server.URL)
+
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--config", configPath, "--json", "accounts", "--provider", "enablebanking", "--connection", "session-1"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotJSON := stdout.String()
+	for _, want := range []string{`"provider_account_id": "stable-hash"`, `"provider_resource_id": "session-account-uid"`, `"institution_id": "NL:Belfius"`, `"count": 1`} {
+		if !strings.Contains(gotJSON, want) {
+			t.Fatalf("accounts JSON missing %s:\n%s", want, gotJSON)
+		}
+	}
+	if strings.Contains(gotJSON, "raw_json") || strings.Contains(gotJSON, "RawJSON") {
+		t.Fatalf("accounts JSON leaked raw JSON:\n%s", gotJSON)
+	}
+	if !sawConfiguredCountry {
+		t.Fatal("institution archive did not use configured country")
+	}
+
+	stdout.Reset()
+	err = Run(context.Background(), []string{"--config", configPath, "--plain", "accounts", "--provider", "enablebanking", "--connection", "session-1"}, "test", &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotPlain := stdout.String()
+	for _, want := range []string{"accounts[0].provider_account_id: stable-hash", "accounts[0].provider_resource_id: session-account-uid", "accounts[0].institution_id: NL:Belfius", "count: 1"} {
+		if !strings.Contains(gotPlain, want) {
+			t.Fatalf("accounts plain missing %s:\n%s", want, gotPlain)
+		}
+	}
+}
+
 func TestAuthorizeEnableBankingExchangesCodeAndArchivesAccounts(t *testing.T) {
 	var sawSessionCode bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

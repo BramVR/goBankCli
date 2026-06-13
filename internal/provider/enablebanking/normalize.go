@@ -1,7 +1,6 @@
 package enablebanking
 
 import (
-	"errors"
 	"strings"
 	"time"
 
@@ -44,7 +43,7 @@ func NormalizeConnection(session sessionPayload) provider.Connection {
 	}
 }
 
-var ErrMissingStableAccountID = errors.New("enablebanking account missing stable identification")
+var ErrMissingStableAccountID = provider.ErrMissingStableAccountID
 
 func NormalizeAccounts(session sessionPayload) ([]provider.Account, error) {
 	out := make([]provider.Account, 0, len(session.Accounts))
