@@ -73,6 +73,18 @@ func (m *Manager) ArchiveAccounts(ctx context.Context, localConnectionID string,
 	return archived, nil
 }
 
+func (m *Manager) ArchiveConnectionAccounts(ctx context.Context, localConnectionID string, connection provider.Connection, accounts []provider.Account) ([]provider.Account, error) {
+	archived := make([]provider.Account, len(accounts))
+	copy(archived, accounts)
+	institutionID := strings.TrimSpace(connection.InstitutionID)
+	for i := range archived {
+		if strings.TrimSpace(archived[i].InstitutionID) == "" {
+			archived[i].InstitutionID = institutionID
+		}
+	}
+	return m.ArchiveAccounts(ctx, localConnectionID, archived)
+}
+
 func (m *Manager) SyncConnection(ctx context.Context, providerConnectionID string, from, to time.Time) (SyncResult, error) {
 	providerName := m.Provider.Name()
 	localConnectionID := store.LocalConnectionID(providerName, providerConnectionID)

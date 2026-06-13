@@ -57,6 +57,51 @@ func TestManagerArchivesFreshAccountsWithInstitutions(t *testing.T) {
 	}
 }
 
+func TestManagerArchivesConnectionAccountsWithMissingInstitution(t *testing.T) {
+	ctx := context.Background()
+	s, err := store.Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	p := &fakeProvider{
+		name: "example",
+		institutions: map[string][]provider.Institution{
+			"NL": {{Provider: "example", ProviderInstitutionID: "BANK_NL", Name: "Bank NL", Country: "NL"}},
+		},
+	}
+	manager := NewManager(config.Config{
+		DefaultCountry: "BE",
+		Connections: []config.Connection{
+			{Provider: "example", InstitutionID: "BANK_NL", Country: "NL"},
+		},
+	}, p, s)
+
+	localConnectionID := store.LocalConnectionID("example", "conn-1")
+	archived, err := manager.ArchiveConnectionAccounts(ctx, localConnectionID, provider.Connection{
+		Provider:             "example",
+		ProviderConnectionID: "conn-1",
+		InstitutionID:        "BANK_NL",
+	}, []provider.Account{{
+		Provider:          "example",
+		ProviderAccountID: "acct-1",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(archived) != 1 || archived[0].InstitutionID != "BANK_NL" || archived[0].ConnectionID != localConnectionID || archived[0].ID == "" {
+		t.Fatalf("archived accounts = %+v", archived)
+	}
+	rows, err := s.Query(ctx, "select i.country from accounts a join institutions i on i.id = a.institution_id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows.Rows) != 1 || rows.Rows[0][0] != "NL" {
+		t.Fatalf("archive rows = %+v", rows.Rows)
+	}
+}
+
 func TestManagerReusesStoredAccountsWhenStableAccountIDMissing(t *testing.T) {
 	ctx := context.Background()
 	s, err := store.Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
