@@ -1,4 +1,4 @@
-.PHONY: build test fmt lint ci clean gobankcli
+.PHONY: build test fmt lint ci clean docs-site docs-site-test docs-site-clean gobankcli
 
 build:
 	go build -o bin/gobankcli ./cmd/gobankcli
@@ -16,6 +16,15 @@ ci: fmt lint test
 
 clean:
 	rm -rf bin
+
+docs-site:
+	node scripts/build-docs-site.mjs
+
+docs-site-test:
+	node --test scripts/build-docs-site.test.mjs
+
+docs-site-clean:
+	rm -rf dist/docs-site
 
 gobankcli: build
 	./bin/gobankcli $(filter-out $@,$(MAKECMDGOALS))
