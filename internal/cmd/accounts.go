@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"gobankcli/internal/archive"
 	"gobankcli/internal/provider"
-	"gobankcli/internal/provider/enablebanking"
 	"gobankcli/internal/store"
 )
 
@@ -48,48 +48,20 @@ func (c AccountsCmd) Run(ctx context.Context, app *App) error {
 	}
 	defer s.Close()
 	localConnectionID := store.LocalConnectionID(providerName, c.Connection)
-	accounts, fresh, err := accountsForConnection(ctx, p, s, providerName, c.Connection)
+	manager := archive.NewManager(app.Config, p, s)
+	result, err := manager.AccountsForConnection(ctx, c.Connection)
 	if err != nil {
 		return err
 	}
-	if !fresh {
+	accounts := result.Accounts
+	if !result.Fresh {
 		return app.Out.Write(accountsReport{Accounts: accountReports(accounts), Count: len(accounts)})
 	}
-	archivedInstitutions := map[string]bool{}
-	for i := range accounts {
-		if !archivedInstitutions[accounts[i].InstitutionID] {
-			countries := institutionArchiveCountries(app.Config, providerName, accounts[i].InstitutionID)
-			if err := archiveInstitutionByID(ctx, p, s, countries, accounts[i].InstitutionID); err != nil {
-				return err
-			}
-			archivedInstitutions[accounts[i].InstitutionID] = true
-		}
-		accounts[i].ConnectionID = localConnectionID
-		id, err := s.UpsertAccount(ctx, accounts[i])
-		if err != nil {
-			return err
-		}
-		accounts[i].ID = id
+	accounts, err = manager.ArchiveAccounts(ctx, localConnectionID, accounts)
+	if err != nil {
+		return err
 	}
 	return app.Out.Write(accountsReport{Accounts: accountReports(accounts), Count: len(accounts)})
-}
-
-func accountsForConnection(ctx context.Context, p provider.Provider, s *store.Store, providerName, providerConnectionID string) ([]provider.Account, bool, error) {
-	accounts, err := p.ListAccounts(ctx, providerConnectionID)
-	if err == nil {
-		return accounts, true, nil
-	}
-	if providerName != enablebanking.Name || !errors.Is(err, enablebanking.ErrMissingStableAccountID) {
-		return nil, false, err
-	}
-	stored, storedErr := s.AccountsByConnection(ctx, store.LocalConnectionID(providerName, providerConnectionID))
-	if storedErr != nil {
-		return nil, false, storedErr
-	}
-	if len(stored) == 0 {
-		return nil, false, err
-	}
-	return stored, false, nil
 }
 
 func accountReports(accounts []provider.Account) []accountReport {

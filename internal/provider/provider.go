@@ -2,8 +2,11 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrMissingStableAccountID = errors.New("provider account missing stable identification")
 
 type Config struct {
 	Credentials map[string]string

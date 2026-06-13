@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gobankcli/internal/provider"
+	"gobankcli/internal/provider/enablebanking"
 	"gobankcli/internal/store"
 )
 
@@ -126,4 +127,22 @@ func valueOrZero(t *time.Time) time.Time {
 		return time.Time{}
 	}
 	return *t
+}
+
+func accountsForConnection(ctx context.Context, p provider.Provider, s *store.Store, providerName, providerConnectionID string) ([]provider.Account, bool, error) {
+	accounts, err := p.ListAccounts(ctx, providerConnectionID)
+	if err == nil {
+		return accounts, true, nil
+	}
+	if providerName != enablebanking.Name || !errors.Is(err, enablebanking.ErrMissingStableAccountID) {
+		return nil, false, err
+	}
+	stored, storedErr := s.AccountsByConnection(ctx, store.LocalConnectionID(providerName, providerConnectionID))
+	if storedErr != nil {
+		return nil, false, storedErr
+	}
+	if len(stored) == 0 {
+		return nil, false, err
+	}
+	return stored, false, nil
 }
