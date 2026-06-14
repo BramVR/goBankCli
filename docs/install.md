@@ -1,5 +1,5 @@
 ---
-summary: "Install gobankcli from source and verify the local binary."
+summary: "Install gobankcli with Homebrew after release, or build from source."
 read_when:
   - "Updating public install instructions."
   - "Checking the site-first setup path."
