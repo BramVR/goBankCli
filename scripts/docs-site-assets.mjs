@@ -65,16 +65,14 @@ main{max-width:1180px;width:100%;padding:46px clamp(20px,5vw,72px) 84px;margin:0
 .hero{border-bottom:1px solid var(--line);padding:10px 0 28px;margin-bottom:28px}.eyebrow{margin:0 0 10px;color:var(--accent);font-size:.72rem;text-transform:uppercase;letter-spacing:.11em;font-weight:800}
 h1,h2,h3,h4{color:var(--ink);line-height:1.18;letter-spacing:0}h1{font-size:2.42rem;margin:.1em 0 .34em}h2{font-size:1.52rem;margin:2em 0 .55em}h3{font-size:1.12rem;margin:1.55em 0 .35em}h4{font-size:1rem;margin:1.35em 0 .25em}
 .lede{font-size:1.12rem;max-width:68ch}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:8px;padding:10px 15px;font-weight:750;color:var(--ink);background:var(--paper)}.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--soft);text-decoration:none}.btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:#fff}
-.home-hero{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(280px,.72fr);gap:42px;align-items:center;border-bottom:1px solid var(--line);padding:18px 0 34px;margin-bottom:30px}.home-hero h1{font-size:clamp(2.45rem,5vw,4.2rem);line-height:1.02;margin:0 0 18px;max-width:10ch}.home-hero .lede{font-size:1.17rem}
-.hero-art{position:relative;display:flex;align-items:center;justify-content:center;min-height:360px;isolation:isolate}
-.hero-art svg{display:block;width:100%;max-width:430px;height:auto;filter:drop-shadow(0 24px 48px rgba(0,0,0,.28))}
+.home-hero{display:grid;grid-template-columns:minmax(0,.9fr) minmax(320px,1fr);gap:34px;align-items:center;border-bottom:1px solid var(--line);padding:18px 0 34px;margin-bottom:30px}.home-hero h1{font-size:clamp(2.45rem,5vw,4.2rem);line-height:1.02;margin:0 0 18px;max-width:10ch}.home-hero .lede{font-size:1.17rem}
+.hero-art{position:relative;display:flex;align-items:center;justify-content:center;min-height:330px;isolation:isolate}
+.hero-art svg{display:block;width:100%;max-width:540px;height:auto;filter:drop-shadow(0 24px 48px rgba(0,0,0,.28))}
 :root[data-theme="light"] .hero-art svg{filter:drop-shadow(0 18px 34px rgba(20,32,50,.12))}
-.vault-link{stroke-dasharray:5 10;animation:vault-flow 6s linear infinite}
-.vault-pulse{transform-origin:center;transform-box:fill-box;animation:vault-pulse 1.8s ease-in-out infinite}
-.vault-spark{animation:vault-spark 3.8s ease-in-out infinite}
-@keyframes vault-flow{to{stroke-dashoffset:-120}}
-@keyframes vault-pulse{0%,100%{opacity:.72;transform:scale(.92)}50%{opacity:1;transform:scale(1.18)}}
-@keyframes vault-spark{0%,100%{opacity:.26}45%,60%{opacity:.92}}
+.archive-flow{stroke-dasharray:112 920;animation:archive-flow 3.8s linear infinite}
+.archive-dot{transform-origin:center;transform-box:fill-box;animation:archive-pulse 1.15s ease-in-out infinite}
+@keyframes archive-flow{from{stroke-dashoffset:112}to{stroke-dashoffset:-920}}
+@keyframes archive-pulse{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.35)}}
 .feature-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:0}.feature-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;background:var(--paper);color:var(--text);font-size:.82rem;font-weight:650;text-decoration:none}.feature-pill:hover{border-color:var(--accent);color:var(--accent);background:var(--soft);text-decoration:none}.feature-pill svg{width:15px;height:15px;color:var(--accent);flex:0 0 15px}
 .doc-grid{display:grid;grid-template-columns:minmax(0,72ch) 212px;gap:46px}.doc{min-width:0;overflow-wrap:break-word}.doc h1:first-child{display:none}.doc :is(h2,h3,h4){position:relative}.doc :is(h2,h3,h4) .anchor{position:absolute;left:-1.05em;color:var(--subtle);opacity:0;text-decoration:none}.doc :is(h2,h3,h4):hover .anchor{opacity:.75}
 .doc p{margin:0 0 1.08em}.doc ul,.doc ol{padding-left:1.35rem;margin:0 0 1.18em}.doc li{margin:.28em 0}.doc strong{color:var(--ink)}
@@ -83,7 +81,7 @@ h1,h2,h3,h4{color:var(--ink);line-height:1.18;letter-spacing:0}h1{font-size:2.42
 .toc{position:sticky;top:28px;align-self:start;border-left:1px solid var(--line);padding-left:14px;font-size:.85rem;max-height:calc(100vh - 56px);overflow:auto}.toc h2{font-size:.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle);margin:0 0 8px}.toc a{display:block;color:var(--muted);padding:3px 0}.toc a:hover{color:var(--accent);text-decoration:none}.toc-l3{padding-left:14px!important}
 .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid var(--line);margin-top:42px;padding-top:20px}.pager a{border:1px solid var(--line);border-radius:8px;padding:11px 13px;color:var(--ink);background:var(--paper)}.pager a:hover{border-color:var(--accent);background:var(--soft);text-decoration:none}.pager small{display:block;color:var(--muted);text-transform:uppercase;font-size:.68rem;letter-spacing:.08em}
 .nav-toggle{display:none;position:fixed;top:14px;right:14px;z-index:20;width:40px;height:40px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow);padding:9px;cursor:pointer}.nav-toggle span{display:block;height:2px;background:currentColor;border-radius:2px;margin:5px 0}
-@media(prefers-reduced-motion:reduce){.vault-link,.vault-pulse,.vault-spark{animation:none}}
+@media(prefers-reduced-motion:reduce){.archive-flow{animation:none;stroke-dasharray:none}.archive-dot{animation:none}}
 @media(max-width:960px){.shell{display:block}.sidebar{position:fixed;inset:0 28% 0 0;max-width:330px;z-index:15;transform:translateX(-102%);transition:transform .2s ease;box-shadow:var(--shadow);pointer-events:none}.sidebar.open{transform:translateX(0);pointer-events:auto}.nav-toggle{display:block}.theme-float{display:inline-grid;position:fixed;top:14px;right:62px;z-index:20;width:40px;height:40px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}main{padding:62px 18px 56px}.home-hero{display:block}.hero-art{margin-top:24px;min-height:260px}.hero-art svg{max-width:380px}.doc-grid{display:block}.toc{display:none}h1{font-size:2rem}.home-hero h1{font-size:2.7rem}.doc :is(h2,h3,h4) .anchor{display:none}}
 `;
 }
@@ -114,59 +112,32 @@ document.querySelectorAll(".doc pre").forEach((pre)=>{const button=document.crea
 `;
 }
 
-export function bankVaultArtSvg() {
-  const nodes = [
-    [70, 116], [98, 84], [144, 62], [190, 84], [218, 116], [218, 176], [70, 176],
-    [144, 104], [112, 122], [176, 122], [108, 154], [180, 154], [144, 146],
-    [144, 24], [48, 78], [240, 78], [34, 142], [254, 142], [70, 216], [218, 216], [144, 238],
+export function bankArchiveArtSvg() {
+  const graphPath = "M14 128L52 112L90 122L128 88L166 104L204 70L242 96L280 82L346 58";
+  const points = [
+    [14, 128], [52, 112], [90, 122], [128, 88], [166, 104], [204, 70], [242, 96], [280, 82], [346, 58],
   ];
-  const nodeDots = nodes
-    .map(([x, y], index) => `<circle class="vault-spark" cx="${x}" cy="${y}" r="${index < 7 ? 2.4 : 2.8}" style="animation-delay:${(index % 9) * 0.18}s"/>`)
+  const pointDots = points
+    .map(([x, y], index) => `<circle class="archive-dot" cx="${x}" cy="${y}" r="${index === points.length - 1 ? 3.1 : 2.5}" fill="${index === points.length - 1 ? "#f5c451" : "#8ab4ff"}" style="animation-delay:${(index % 4) * 0.13}s"/>`)
     .join("");
-  const links = [
-    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0],
-    [7, 8], [7, 9], [7, 10], [7, 11], [7, 12], [8, 10], [9, 11], [10, 12], [11, 12],
-    [13, 2], [14, 1], [15, 3], [16, 0], [17, 4], [18, 6], [19, 5], [20, 6], [20, 5], [13, 14], [13, 15], [16, 18], [17, 19],
-  ];
-  const linkLines = links
-    .map(([from, to]) => `<line class="vault-link" x1="${nodes[from][0]}" y1="${nodes[from][1]}" x2="${nodes[to][0]}" y2="${nodes[to][1]}"/>`)
-    .join("");
-  const dust = Array.from({ length: 120 }, (_, index) => {
-    const x = 38 + ((index * 37) % 212);
-    const y = 42 + ((index * 53) % 190);
-    const keep = x > 62 && x < 226 && y > 56 && y < 210;
-    const opacity = keep ? 0.42 + (index % 5) * 0.08 : 0.12;
-    return `<circle cx="${x}" cy="${y}" r="${index % 7 === 0 ? 1.15 : 0.75}" opacity="${opacity.toFixed(2)}"/>`;
-  }).join("");
-  return `<svg class="vault-art" viewBox="0 0 288 288" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Particle vault archive visual" focusable="false">
+  return `<svg class="archive-art" viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Local bank archive flow visual" focusable="false">
 <defs>
-<radialGradient id="vault-bg" cx="50%" cy="48%" r="58%"><stop offset="0%" stop-color="#1d4ed8" stop-opacity=".18"/><stop offset="68%" stop-color="#1d4ed8" stop-opacity=".05"/><stop offset="100%" stop-color="#1d4ed8" stop-opacity="0"/></radialGradient>
-<linearGradient id="vault-blue" x1="48" y1="40" x2="240" y2="236"><stop offset="0%" stop-color="#8ab4ff"/><stop offset="100%" stop-color="#5ea1ff"/></linearGradient>
-<linearGradient id="vault-warn" x1="106" y1="104" x2="178" y2="176"><stop offset="0%" stop-color="#f8df88"/><stop offset="100%" stop-color="#f5c451"/></linearGradient>
-<filter id="vault-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<linearGradient id="archive-card" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#172232"/><stop offset="100%" stop-color="#080c12"/></linearGradient>
+<linearGradient id="archive-stroke" x1="18" y1="0" x2="338" y2="0"><stop offset="0%" stop-color="#8ab4ff"/><stop offset="62%" stop-color="#5ea1ff"/><stop offset="100%" stop-color="#f5c451"/></linearGradient>
+<linearGradient id="archive-area" x1="0" y1="54" x2="0" y2="148"><stop offset="0%" stop-color="#5ea1ff" stop-opacity=".22"/><stop offset="100%" stop-color="#5ea1ff" stop-opacity="0"/></linearGradient>
+<filter id="archive-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
-<rect width="288" height="288" fill="transparent"/>
-<circle cx="144" cy="144" r="126" fill="url(#vault-bg)"/>
-<g fill="#8ab4ff">${dust}</g>
-<g stroke="#5ea1ff" stroke-width=".75" opacity=".3" fill="none">${linkLines}</g>
-<g stroke="url(#vault-blue)" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#vault-glow)">
-<path d="M70 176V116L98 84 144 62 190 84 218 116v60H70Z" stroke-width="2.8"/>
-<path d="M87 163V123l22-23 35-17 35 17 22 23v40" stroke-width="1.25" opacity=".74"/>
-<path d="M92 194h104M104 204h80M116 214h56" stroke-width="1.1" opacity=".58"/>
-<circle cx="144" cy="146" r="43" stroke-width="2.2"/>
-<circle cx="144" cy="146" r="21" stroke-width="1.5" opacity=".82"/>
-<path d="M144 102v88M101 146h86M113 115l62 62M175 115l-62 62" stroke-width="1.15" opacity=".65"/>
-<path d="M202 124h-14v18h14v18h-14v16h25v-72h-11v20Z" stroke-width="2" opacity=".9"/>
-</g>
-<g fill="url(#vault-blue)" stroke="#cfe2ff" stroke-width=".8" filter="url(#vault-glow)">${nodeDots}</g>
-<g fill="url(#vault-warn)" filter="url(#vault-glow)">
-<circle class="vault-pulse" cx="144" cy="146" r="7"/>
-<circle cx="144" cy="146" r="2.5"/>
-<circle class="vault-spark" cx="132" cy="130" r="2.2" style="animation-delay:.22s"/>
-<circle class="vault-spark" cx="160" cy="133" r="2" style="animation-delay:.44s"/>
-<circle class="vault-spark" cx="158" cy="166" r="2.4" style="animation-delay:.66s"/>
-<circle class="vault-spark" cx="126" cy="162" r="2" style="animation-delay:.88s"/>
-</g>
+<rect width="360" height="200" rx="16" fill="url(#archive-card)" stroke="#1e293b" stroke-width="1"/>
+<g transform="translate(18 20)"><circle cx="0" cy="0" r="4.5" fill="#ef5350" opacity=".85"/><circle cx="13" cy="0" r="4.5" fill="#fbbf24" opacity=".85"/><circle cx="26" cy="0" r="4.5" fill="#4ade80" opacity=".85"/></g>
+<text x="344" y="24" fill="#64748b" font-family="JetBrains Mono, Menlo, monospace" font-size="9" letter-spacing="1.5" text-anchor="end">BANK DATA · LOCAL</text>
+<g stroke="#1e293b" stroke-width=".7" opacity=".55"><line x1="14" y1="60" x2="346" y2="60"/><line x1="14" y1="115" x2="346" y2="115"/><line x1="14" y1="170" x2="346" y2="170"/></g>
+<g stroke="#1e293b" stroke-width=".5" opacity=".32"><line x1="66" y1="48" x2="66" y2="178"/><line x1="129" y1="48" x2="129" y2="178"/><line x1="192" y1="48" x2="192" y2="178"/><line x1="249" y1="48" x2="249" y2="178"/><line x1="312" y1="48" x2="312" y2="178"/></g>
+<path d="${graphPath}L346 148L14 148Z" fill="url(#archive-area)"/>
+<path d="${graphPath}" stroke="url(#archive-stroke)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".26"/>
+<path class="archive-flow" d="${graphPath}" stroke="url(#archive-stroke)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#archive-glow)"/>
+<g filter="url(#archive-glow)">${pointDots}</g>
+<g transform="translate(18 184)" font-family="JetBrains Mono, Menlo, monospace" font-size="9" letter-spacing="1" fill="#64748b"><circle class="archive-dot" cx="0" cy="-3" r="2.4" fill="#5ea1ff"/><text x="10" y="0">SQLITE DB</text></g>
+<text x="344" y="184" fill="#64748b" font-family="JetBrains Mono, Menlo, monospace" font-size="9" letter-spacing="1" text-anchor="end">CSV READY</text>
 </svg>`;
 }
 

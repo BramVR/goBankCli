@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { bankVaultArtSvg, brandMarkSvg, css, faviconSvg, js, preThemeScript, shieldSvg, socialCardSvg, themeToggleHtml } from "./docs-site-assets.mjs";
+import { bankArchiveArtSvg, brandMarkSvg, css, faviconSvg, js, preThemeScript, shieldSvg, socialCardSvg, themeToggleHtml } from "./docs-site-assets.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDir, "..");
@@ -385,7 +385,7 @@ function homeHero() {
           <p class="lede">${escapeHtml(productDescription)}</p>
           <div class="actions"><a class="btn primary" href="quickstart.html">Quickstart</a><a class="btn" href="install.html">Install</a><a class="btn" href="${repoBase}" rel="noopener">GitHub</a></div>
         </div>
-        <div class="hero-art" aria-hidden="true">${bankVaultArtSvg()}</div>
+        <div class="hero-art" aria-hidden="true">${bankArchiveArtSvg()}</div>
         <div class="feature-row" aria-label="Project capabilities">${features.map(([feature, href]) => `<a class="feature-pill" href="${href}">${shieldSvg()}${escapeHtml(feature)}</a>`).join("")}</div>
       </header>`;
 }
