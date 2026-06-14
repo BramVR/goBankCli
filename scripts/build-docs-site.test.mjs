@@ -61,6 +61,13 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   assert.match(index, /href="quickstart\.html"/);
   assert.match(index, /href="install\.html"/);
   assert.match(index, /href="provider-setup\.html"/);
+  const navLabels = [...index.matchAll(/<a\b[^>]*class="nav-link[^"]*"[^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
+  assert.ok(navLabels.includes("accounts"));
+  assert.ok(navLabels.includes("help"));
+  assert.ok(navLabels.includes("version"));
+  assert.ok(!navLabels.includes("gobankcli accounts"));
+  assert.ok(!navLabels.includes("gobankcli --help"));
+  assert.ok(!navLabels.includes("gobankcli --version"));
   assert.match(index, /id="doc-search"/);
   assert.match(index, /data-theme-toggle/);
   assert.match(index, /class="hero-art"/);
