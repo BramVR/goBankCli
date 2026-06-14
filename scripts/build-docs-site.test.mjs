@@ -63,10 +63,12 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   assert.match(index, /href="provider-setup\.html"/);
   assert.match(index, /id="doc-search"/);
   assert.match(index, /data-theme-toggle/);
-  assert.match(index, /id="archive-hero-canvas"/);
-  assert.match(index, /three@0\.184\.0\/build\/three\.module\.js/);
-  assert.match(index, /sha384-8FCZ1eVO6it4\+pbec2aDtnTrwjWXZLJRC\+MAGCIPDgsYnUrl\/E0A2YlF8ioMKI\/J/);
-  assert.match(index, /sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT/);
+  assert.match(index, /class="hero-art"/);
+  assert.match(index, /class="vault-art"/);
+  assert.match(index, /Particle vault archive visual/);
+  assert.match(index, /class="vault-link"/);
+  assert.match(index, /@media\(prefers-reduced-motion:reduce\).*vault-link/s);
+  assert.doesNotMatch(index, /archive-hero-canvas|three@|threeHeroModule|new THREE|WebGLRenderer/);
   assert.match(index, /class="feature-pill"/);
   assert.match(providerSetup, /https:\/\/127\.0\.0\.1:28787\/enablebanking\/callback/);
   assert.match(providerSetup, /Restricted production only returns accounts linked/);
@@ -75,7 +77,7 @@ test("docs-site builds public project-site artifact from allowlisted docs", () =
   assert.match(quickstart, /does not scrape/i);
   assert.match(quickstart, /cloud upload/i);
   assert.match(index, /matchMedia\("\(max-width:960px\)"\)/);
-  assert.match(index, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(index, /@media\(prefers-reduced-motion:reduce\)/);
   assert.doesNotMatch(commands, /class="toc-l[23]" href="#[^"]+">#/);
   assert.equal(fs.readFileSync(path.join(outDir, "CNAME"), "utf8").trim(), "gobankcli.bramvanrompuy.be");
 
