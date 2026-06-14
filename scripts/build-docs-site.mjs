@@ -404,7 +404,12 @@ function navHtml(currentPage) {
 }
 
 function navTitle(page) {
-  return page.rel === "index.md" ? "Overview" : page.title;
+  if (page.rel === "index.md") return "Overview";
+  return page.rel.startsWith("commands/") ? commandNavTitle(page.title) : page.title;
+}
+
+function commandNavTitle(title) {
+  return title.replace(/^gobankcli\s+(?:--)?/i, "");
 }
 
 function pagerHtml(prev, next, currentOutRel) {
