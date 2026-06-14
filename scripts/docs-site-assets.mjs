@@ -65,9 +65,14 @@ main{max-width:1180px;width:100%;padding:46px clamp(20px,5vw,72px) 84px;margin:0
 .hero{border-bottom:1px solid var(--line);padding:10px 0 28px;margin-bottom:28px}.eyebrow{margin:0 0 10px;color:var(--accent);font-size:.72rem;text-transform:uppercase;letter-spacing:.11em;font-weight:800}
 h1,h2,h3,h4{color:var(--ink);line-height:1.18;letter-spacing:0}h1{font-size:2.42rem;margin:.1em 0 .34em}h2{font-size:1.52rem;margin:2em 0 .55em}h3{font-size:1.12rem;margin:1.55em 0 .35em}h4{font-size:1rem;margin:1.35em 0 .25em}
 .lede{font-size:1.12rem;max-width:68ch}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:8px;padding:10px 15px;font-weight:750;color:var(--ink);background:var(--paper)}.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--soft);text-decoration:none}.btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:#fff}
-.home-hero{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(280px,.72fr);gap:42px;align-items:center;border-bottom:1px solid var(--line);padding:18px 0 34px;margin-bottom:30px}.home-hero h1{font-size:clamp(2.45rem,5vw,4.2rem);line-height:1.02;margin:0 0 18px;max-width:10ch}.home-hero .lede{font-size:1.17rem}
-.hero-stage{position:relative;min-height:360px;overflow:visible;isolation:isolate}
-.hero-stage canvas{display:block;width:100%;height:100%;min-height:360px}
+.home-hero{display:grid;grid-template-columns:minmax(0,.9fr) minmax(320px,1fr);gap:34px;align-items:center;border-bottom:1px solid var(--line);padding:18px 0 34px;margin-bottom:30px}.home-hero h1{font-size:clamp(2.45rem,5vw,4.2rem);line-height:1.02;margin:0 0 18px;max-width:10ch}.home-hero .lede{font-size:1.17rem}
+.hero-art{position:relative;display:flex;align-items:center;justify-content:center;min-height:330px;isolation:isolate}
+.hero-art svg{display:block;width:100%;max-width:540px;height:auto;filter:drop-shadow(0 24px 48px rgba(0,0,0,.28))}
+:root[data-theme="light"] .hero-art svg{filter:drop-shadow(0 18px 34px rgba(20,32,50,.12))}
+.archive-flow{stroke-dasharray:112 920;animation:archive-flow 3.8s linear infinite}
+.archive-dot{transform-origin:center;transform-box:fill-box;animation:archive-pulse 1.15s ease-in-out infinite}
+@keyframes archive-flow{from{stroke-dashoffset:112}to{stroke-dashoffset:-920}}
+@keyframes archive-pulse{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.35)}}
 .feature-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:0}.feature-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;background:var(--paper);color:var(--text);font-size:.82rem;font-weight:650;text-decoration:none}.feature-pill:hover{border-color:var(--accent);color:var(--accent);background:var(--soft);text-decoration:none}.feature-pill svg{width:15px;height:15px;color:var(--accent);flex:0 0 15px}
 .doc-grid{display:grid;grid-template-columns:minmax(0,72ch) 212px;gap:46px}.doc{min-width:0;overflow-wrap:break-word}.doc h1:first-child{display:none}.doc :is(h2,h3,h4){position:relative}.doc :is(h2,h3,h4) .anchor{position:absolute;left:-1.05em;color:var(--subtle);opacity:0;text-decoration:none}.doc :is(h2,h3,h4):hover .anchor{opacity:.75}
 .doc p{margin:0 0 1.08em}.doc ul,.doc ol{padding-left:1.35rem;margin:0 0 1.18em}.doc li{margin:.28em 0}.doc strong{color:var(--ink)}
@@ -76,7 +81,8 @@ h1,h2,h3,h4{color:var(--ink);line-height:1.18;letter-spacing:0}h1{font-size:2.42
 .toc{position:sticky;top:28px;align-self:start;border-left:1px solid var(--line);padding-left:14px;font-size:.85rem;max-height:calc(100vh - 56px);overflow:auto}.toc h2{font-size:.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle);margin:0 0 8px}.toc a{display:block;color:var(--muted);padding:3px 0}.toc a:hover{color:var(--accent);text-decoration:none}.toc-l3{padding-left:14px!important}
 .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid var(--line);margin-top:42px;padding-top:20px}.pager a{border:1px solid var(--line);border-radius:8px;padding:11px 13px;color:var(--ink);background:var(--paper)}.pager a:hover{border-color:var(--accent);background:var(--soft);text-decoration:none}.pager small{display:block;color:var(--muted);text-transform:uppercase;font-size:.68rem;letter-spacing:.08em}
 .nav-toggle{display:none;position:fixed;top:14px;right:14px;z-index:20;width:40px;height:40px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow);padding:9px;cursor:pointer}.nav-toggle span{display:block;height:2px;background:currentColor;border-radius:2px;margin:5px 0}
-@media(max-width:960px){.shell{display:block}.sidebar{position:fixed;inset:0 28% 0 0;max-width:330px;z-index:15;transform:translateX(-102%);transition:transform .2s ease;box-shadow:var(--shadow);pointer-events:none}.sidebar.open{transform:translateX(0);pointer-events:auto}.nav-toggle{display:block}.theme-float{display:inline-grid;position:fixed;top:14px;right:62px;z-index:20;width:40px;height:40px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}main{padding:62px 18px 56px}.home-hero{display:block}.hero-stage{margin-top:24px;min-height:310px}.hero-stage canvas{min-height:310px}.doc-grid{display:block}.toc{display:none}h1{font-size:2rem}.home-hero h1{font-size:2.7rem}.doc :is(h2,h3,h4) .anchor{display:none}}
+@media(prefers-reduced-motion:reduce){.archive-flow{animation:none;stroke-dasharray:none}.archive-dot{animation:none}}
+@media(max-width:960px){.shell{display:block}.sidebar{position:fixed;inset:0 28% 0 0;max-width:330px;z-index:15;transform:translateX(-102%);transition:transform .2s ease;box-shadow:var(--shadow);pointer-events:none}.sidebar.open{transform:translateX(0);pointer-events:auto}.nav-toggle{display:block}.theme-float{display:inline-grid;position:fixed;top:14px;right:62px;z-index:20;width:40px;height:40px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}main{padding:62px 18px 56px}.home-hero{display:block}.hero-art{margin-top:24px;min-height:260px}.hero-art svg{max-width:380px}.doc-grid{display:block}.toc{display:none}h1{font-size:2rem}.home-hero h1{font-size:2.7rem}.doc :is(h2,h3,h4) .anchor{display:none}}
 `;
 }
 
@@ -106,171 +112,33 @@ document.querySelectorAll(".doc pre").forEach((pre)=>{const button=document.crea
 `;
 }
 
-export function threeHeroModule() {
-  return `
-async function loadThree() {
-  const sources = {
-    core: {
-      url: "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.core.js",
-      integrity: "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
-    },
-    module: {
-      url: "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
-      integrity: "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
-    },
-  };
-  async function sriText(source) {
-    const response = await fetch(source.url, { cache: "force-cache", integrity: source.integrity });
-    if (!response.ok) throw new Error("Unable to load Three.js");
-    return response.text();
-  }
-  const [coreSource, moduleSource] = await Promise.all([sriText(sources.core), sriText(sources.module)]);
-  const coreUrl = URL.createObjectURL(new Blob([coreSource], { type: "text/javascript" }));
-  const moduleUrl = URL.createObjectURL(
-    new Blob([moduleSource.replaceAll("from './three.core.js'", "from " + JSON.stringify(coreUrl))], { type: "text/javascript" }),
-  );
-  return import(moduleUrl);
-}
-
-const THREE = await loadThree();
-
-const canvas = document.getElementById("archive-hero-canvas");
-const stage = canvas?.closest(".hero-stage");
-if (canvas && stage) {
-  const styles = getComputedStyle(document.documentElement);
-  const color = (name, fallback) => new THREE.Color(styles.getPropertyValue(name).trim() || fallback);
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-  camera.position.set(4.2, 3.2, 6.2);
-  camera.lookAt(0, 0, 0);
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  const root = new THREE.Group();
-  scene.add(root);
-
-  const accent = color("--accent", "#1d4ed8");
-  const accentStrong = color("--accent-strong", "#1e40af");
-  const ink = color("--ink", "#162032");
-  const line = color("--line", "#dce5eb");
-  const warn = color("--warn", "#f5c451");
-  const paper = color("--paper", "#ffffff");
-
-  scene.add(new THREE.HemisphereLight(paper, ink, 2.2));
-  const key = new THREE.DirectionalLight(0xffffff, 2.4);
-  key.position.set(3, 5, 4);
-  scene.add(key);
-
-  const coreMat = new THREE.MeshBasicMaterial({ color: accentStrong, transparent: true, opacity: 0.12, wireframe: true, blending: THREE.AdditiveBlending });
-  const diskMat = new THREE.MeshBasicMaterial({ color: accentStrong, transparent: true, opacity: 0.34, wireframe: true, blending: THREE.AdditiveBlending });
-  const warnMat = new THREE.MeshBasicMaterial({ color: warn, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending });
-  const accentLine = new THREE.LineBasicMaterial({ color: accentStrong, transparent: true, opacity: 0.56, blending: THREE.AdditiveBlending });
-
-  const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.56, 1.5, 64, 1, true), coreMat);
-  root.add(shell);
-
-  const disks = [];
-  for (let index = 0; index < 4; index += 1) {
-    const disk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.035, 64), diskMat.clone());
-    disk.position.y = -0.38 + index * 0.25;
-    disks.push(disk);
-    root.add(disk);
-  }
-
-  const verticals = [];
-  for (let index = 0; index < 8; index += 1) {
-    const angle = (index / 8) * Math.PI * 2;
-    const x = Math.cos(angle) * 0.56;
-    const z = Math.sin(angle) * 0.56;
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(x, -0.78, z),
-      new THREE.Vector3(x, 0.78, z),
-    ]);
-    const lineMesh = new THREE.Line(lineGeometry, accentLine.clone());
-    verticals.push(lineMesh);
-    root.add(lineMesh);
-  }
-
-  const particles = [];
-  const particleGeo = new THREE.SphereGeometry(0.035, 16, 8);
-  for (let index = 0; index < 10; index += 1) {
-    const dot = new THREE.Mesh(particleGeo, index % 5 === 0 ? warnMat : diskMat.clone());
-    dot.userData.phase = index / 10;
-    dot.userData.radius = 0.76 + (index % 4) * 0.19;
-    dot.userData.lift = -0.34 + (index % 5) * 0.17;
-    particles.push(dot);
-    root.add(dot);
-  }
-
-  let pointerX = 0.12;
-  let pointerY = 0;
-  let pulse = 0;
-  let frame = 0;
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  stage.addEventListener("pointermove", (event) => {
-    const rect = stage.getBoundingClientRect();
-    pointerX = ((event.clientX - rect.left) / rect.width - 0.5) * 1.15;
-    pointerY = ((event.clientY - rect.top) / rect.height - 0.5) * 0.72;
-    if (reduceMotion.matches) renderFrame(0, false);
-  });
-  stage.addEventListener("pointerdown", () => {
-    pulse = 1;
-    if (reduceMotion.matches) renderFrame(0, false);
-  });
-
-  function resize() {
-    const rect = stage.getBoundingClientRect();
-    renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
-    camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
-    camera.updateProjectionMatrix();
-  }
-
-  const observer = new ResizeObserver(resize);
-  observer.observe(stage);
-  resize();
-  stage.dataset.ready = "true";
-
-  function renderFrame(time, moving = true) {
-    const t = moving ? time * 0.001 : 0;
-    pulse *= moving ? 0.93 : 0;
-    root.rotation.y = (moving ? Math.sin(t * 0.42) * 0.28 : 0.08) + pointerX;
-    root.rotation.x = -0.08 + pointerY;
-    shell.rotation.y = t * 0.18 + pulse * 0.18;
-    disks.forEach((disk, index) => {
-      disk.rotation.y = t * (0.18 + index * 0.015);
-      disk.scale.setScalar(1 + Math.sin(t * 2.1 + index) * 0.025 + pulse * 0.08);
-      disk.material.opacity = 0.24 + Math.sin(t * 2 + index) * 0.05 + pulse * 0.16;
-    });
-    verticals.forEach((lineMesh, index) => {
-      lineMesh.material.opacity = 0.28 + Math.sin(t * 2.4 + index * 0.8) * 0.14 + pulse * 0.12;
-    });
-    particles.forEach((dot, index) => {
-      const phase = t * (0.34 + (index % 3) * 0.035) + dot.userData.phase * Math.PI * 2;
-      const radius = dot.userData.radius + Math.sin(t + index) * 0.035 + pulse * 0.12;
-      dot.position.set(Math.cos(phase) * radius, dot.userData.lift + Math.sin(phase * 1.6) * 0.16, Math.sin(phase) * radius);
-      dot.scale.setScalar(0.78 + Math.sin(t * 3 + index) * 0.16 + pulse * 1.1);
-      dot.material.opacity = index % 5 === 0 ? 0.82 : 0.34 + pulse * 0.22;
-    });
-    renderer.render(scene, camera);
-  }
-
-  function animate(time) {
-    renderFrame(time, true);
-    if (!reduceMotion.matches) frame = requestAnimationFrame(animate);
-  }
-
-  function startAnimation() {
-    cancelAnimationFrame(frame);
-    if (reduceMotion.matches) {
-      renderFrame(0, false);
-    } else {
-      frame = requestAnimationFrame(animate);
-    }
-  }
-
-  reduceMotion.addEventListener("change", startAnimation);
-  startAnimation();
-}
-`;
+export function bankArchiveArtSvg() {
+  const graphPath = "M14 128L52 112L90 122L128 88L166 104L204 70L242 96L280 82L346 58";
+  const points = [
+    [14, 128], [52, 112], [90, 122], [128, 88], [166, 104], [204, 70], [242, 96], [280, 82], [346, 58],
+  ];
+  const pointDots = points
+    .map(([x, y], index) => `<circle class="archive-dot" cx="${x}" cy="${y}" r="${index === points.length - 1 ? 3.1 : 2.5}" fill="${index === points.length - 1 ? "#f5c451" : "#8ab4ff"}" style="animation-delay:${(index % 4) * 0.13}s"/>`)
+    .join("");
+  return `<svg class="archive-art" viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Local bank archive flow visual" focusable="false">
+<defs>
+<linearGradient id="archive-card" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#172232"/><stop offset="100%" stop-color="#080c12"/></linearGradient>
+<linearGradient id="archive-stroke" x1="18" y1="0" x2="338" y2="0"><stop offset="0%" stop-color="#8ab4ff"/><stop offset="62%" stop-color="#5ea1ff"/><stop offset="100%" stop-color="#f5c451"/></linearGradient>
+<linearGradient id="archive-area" x1="0" y1="54" x2="0" y2="148"><stop offset="0%" stop-color="#5ea1ff" stop-opacity=".22"/><stop offset="100%" stop-color="#5ea1ff" stop-opacity="0"/></linearGradient>
+<filter id="archive-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="360" height="200" rx="16" fill="url(#archive-card)" stroke="#1e293b" stroke-width="1"/>
+<g transform="translate(18 20)"><circle cx="0" cy="0" r="4.5" fill="#ef5350" opacity=".85"/><circle cx="13" cy="0" r="4.5" fill="#fbbf24" opacity=".85"/><circle cx="26" cy="0" r="4.5" fill="#4ade80" opacity=".85"/></g>
+<text x="344" y="24" fill="#64748b" font-family="JetBrains Mono, Menlo, monospace" font-size="9" letter-spacing="1.5" text-anchor="end">BANK DATA · LOCAL</text>
+<g stroke="#1e293b" stroke-width=".7" opacity=".55"><line x1="14" y1="60" x2="346" y2="60"/><line x1="14" y1="115" x2="346" y2="115"/><line x1="14" y1="170" x2="346" y2="170"/></g>
+<g stroke="#1e293b" stroke-width=".5" opacity=".32"><line x1="66" y1="48" x2="66" y2="178"/><line x1="129" y1="48" x2="129" y2="178"/><line x1="192" y1="48" x2="192" y2="178"/><line x1="249" y1="48" x2="249" y2="178"/><line x1="312" y1="48" x2="312" y2="178"/></g>
+<path d="${graphPath}L346 148L14 148Z" fill="url(#archive-area)"/>
+<path d="${graphPath}" stroke="url(#archive-stroke)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".26"/>
+<path class="archive-flow" d="${graphPath}" stroke="url(#archive-stroke)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#archive-glow)"/>
+<g filter="url(#archive-glow)">${pointDots}</g>
+<g transform="translate(18 184)" font-family="JetBrains Mono, Menlo, monospace" font-size="9" letter-spacing="1" fill="#64748b"><circle class="archive-dot" cx="0" cy="-3" r="2.4" fill="#5ea1ff"/><text x="10" y="0">SQLITE DB</text></g>
+<text x="344" y="184" fill="#64748b" font-family="JetBrains Mono, Menlo, monospace" font-size="9" letter-spacing="1" text-anchor="end">CSV READY</text>
+</svg>`;
 }
 
 export function preThemeScript() {
