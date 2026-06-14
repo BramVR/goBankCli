@@ -1,3 +1,8 @@
+[![Pages](https://github.com/BramVR/goBankCli/actions/workflows/pages.yml/badge.svg)](https://github.com/BramVR/goBankCli/actions/workflows/pages.yml)
+[![Docs](https://img.shields.io/website?url=https%3A%2F%2Fgobankcli.bramvanrompuy.be%2F&label=docs)](https://gobankcli.bramvanrompuy.be/)
+[![Go version](https://img.shields.io/github/go-mod/go-version/BramVR/goBankCli)](go.mod)
+[![License](https://img.shields.io/github/license/BramVR/goBankCli)](LICENSE)
+
 <img src="docs/assets/gobankcli-header.png" alt="gobankcli header" />
 
 # gobankcli
