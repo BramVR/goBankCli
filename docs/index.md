@@ -20,7 +20,7 @@ Use it when you want a private local archive, scriptable terminal output, and re
 
 ## Start Here
 
-- [Install](install.md): build from source and verify the local binary.
+- [Install](install.md): install with Homebrew after release, or build from source.
 - [Quickstart](quickstart.md): initialize, connect, sync, export, and query.
 - [Provider Setup](provider-setup.md): configure Enable Banking or GoCardless.
 - [Archive, Query, Export](archive-query-export.md): work with synced data.
@@ -32,4 +32,4 @@ Use it when you want a private local archive, scriptable terminal output, and re
 
 ## Source
 
-The project is open source at [BramVR/goBankCli](https://github.com/BramVR/goBankCli). Development notes and local verification commands live in [Development](development.md).
+The project is open source at [BramVR/goBankCli](https://github.com/BramVR/goBankCli). Development notes and local verification commands live in [Development](development.md), and release notes live in [Release](release.md).

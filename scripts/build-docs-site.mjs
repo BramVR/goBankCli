@@ -15,7 +15,7 @@ const productName = "gobankcli";
 const productTagline = "Local-first bank transaction archive.";
 const productDescription =
   "A local-first, read-only bank transaction archive CLI for provider API sync, SQLite storage, read-only SQL inspection, and stable CSV exports.";
-const installHint = "git clone https://github.com/BramVR/goBankCli.git && cd goBankCli && make build";
+const installHint = "brew install BramVR/tap/gobankcli after first release; source build: git clone https://github.com/BramVR/goBankCli.git && cd goBankCli && make build";
 const cname = readCname();
 const siteBase = cname ? `https://${cname}` : "https://bramvr.github.io/goBankCli";
 const commandReferencePages = [
@@ -40,7 +40,7 @@ const sections = [
   ["Setup", ["provider-setup.md", "configuration.md"]],
   ["Use", ["archive-query-export.md", "examples.md"]],
   ["Commands", commandReferencePages],
-  ["Trust", ["security.md", "development.md"]],
+  ["Trust", ["security.md", "development.md", "release.md"]],
   ["Concepts", ["architecture.md", "data-model.md", "providers.md"]],
 ];
 

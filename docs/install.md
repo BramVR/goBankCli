@@ -4,13 +4,32 @@ read_when:
   - "Updating public install instructions."
   - "Checking the site-first setup path."
 title: "Install"
-description: "Build gobankcli from source, install the binary locally, and verify the command surface."
+description: "Install gobankcli with Homebrew after release, or build and verify a local binary from source."
 ---
 # Install
 
-`gobankcli` currently installs from source. The binary is local and self-contained: no daemon, cloud service, browser extension, or background process is installed.
+`gobankcli` is a local, self-contained binary: no daemon, cloud service,
+browser extension, or background process is installed.
 
-## Requirements
+## Homebrew
+
+After the first GitHub release and Homebrew tap update, install with:
+
+```bash
+brew install BramVR/tap/gobankcli
+gobankcli --version
+```
+
+Upgrade with:
+
+```bash
+brew update
+brew upgrade BramVR/tap/gobankcli
+```
+
+Until the first release is authorized and published, build from source.
+
+## Source Build Requirements
 
 - Go toolchain available on your machine.
 - Git access to the public source repository.
