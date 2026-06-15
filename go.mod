@@ -3,7 +3,7 @@ module gobankcli
 go 1.26
 
 require (
-	github.com/alecthomas/kong v1.13.0
+	github.com/alecthomas/kong v1.15.0
 	github.com/pelletier/go-toml/v2 v2.3.1
 	modernc.org/sqlite v1.50.1
 )
