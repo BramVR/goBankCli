@@ -243,6 +243,21 @@ func TestClientMissingCredentialsFailClearly(t *testing.T) {
 	}
 }
 
+func TestNewRejectsRemoteHTTPBaseURL(t *testing.T) {
+	_, err := New(provider.Config{BaseURL: "http://api.example.test"})
+	if err == nil || !strings.Contains(err.Error(), "https") {
+		t.Fatalf("error = %v, want clear https requirement", err)
+	}
+}
+
+func TestNewAllowsDefaultAndLoopbackHTTPBaseURLs(t *testing.T) {
+	for _, baseURL := range []string{"", "http://127.0.0.1:8080", "http://localhost:8080"} {
+		if _, err := New(provider.Config{BaseURL: baseURL}); err != nil {
+			t.Fatalf("New(%q) error = %v", baseURL, err)
+		}
+	}
+}
+
 func newTestProvider(t *testing.T, baseURL string) provider.Provider {
 	t.Helper()
 	keyPath := filepath.Join(t.TempDir(), "key.pem")

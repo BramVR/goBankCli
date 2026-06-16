@@ -30,6 +30,10 @@ GOBANKCLI_ENABLEBANKING_PRIVATE_KEY_PATH
 GOBANKCLI_ENABLEBANKING_API # optional
 ```
 
+`GOBANKCLI_ENABLEBANKING_API` defaults to `https://api.enablebanking.com`.
+Remote overrides must use HTTPS. Plain HTTP is accepted only for loopback test
+hosts such as `127.0.0.1` or `localhost`.
+
 Requests are signed with RS256 JWTs using the application ID as `kid` and the
 configured RSA private key. Institution IDs are normalized as `COUNTRY:Name`,
 for example `BE:Belfius`.

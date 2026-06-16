@@ -184,6 +184,19 @@ func TestInstitutionsMissingEnableBankingCredentials(t *testing.T) {
 	}
 }
 
+func TestInstitutionsRejectsRemoteHTTPEnableBankingOverride(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(config.EnvEnableBankingAPI, "http://api.example.test")
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"institutions", "--provider", "enablebanking", "--country", "BE"}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "https") {
+		t.Fatalf("Run error = %v, want https requirement", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
 func TestAccountsEnableBankingArchivesAndKeepsOutputShape(t *testing.T) {
 	var sawConfiguredCountry bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

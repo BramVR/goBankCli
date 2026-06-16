@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -32,6 +33,7 @@ const (
 var (
 	ErrMissingCredentials   = errors.New("enablebanking credentials missing")
 	ErrInvalidInstitutionID = errors.New("enablebanking institution id must be COUNTRY:NAME")
+	ErrInsecureBaseURL      = errors.New("enablebanking API override must use https unless the host is loopback")
 )
 
 type SessionExchanger interface {
@@ -55,6 +57,9 @@ func New(cfg provider.Config) (provider.Provider, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := validateBaseURL(u); err != nil {
+		return nil, err
+	}
 	creds := cfg.Credentials
 	c := &Client{
 		baseURL:    u,
@@ -71,6 +76,24 @@ func New(cfg provider.Config) (provider.Provider, error) {
 		c.privateKey = key
 	}
 	return c, nil
+}
+
+func validateBaseURL(u *url.URL) error {
+	if u.Scheme != "http" {
+		return nil
+	}
+	if isLoopbackHost(u.Hostname()) {
+		return nil
+	}
+	return ErrInsecureBaseURL
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func (c *Client) Name() string { return Name }
