@@ -39,6 +39,19 @@ func (c ExportCmd) Run(ctx context.Context, app *App) error {
 		return errors.New("from date must be on or before to date")
 	}
 
+	outPath := c.Out
+	if outPath == "" {
+		outPath = filepath.Join(app.Config.Paths.Exports, "normalized.csv")
+	}
+	outPath = config.ExpandPath(outPath)
+	if outPath == "-" {
+		if app.OutputMode != outfmt.ModeHuman {
+			return errors.New("--json/--plain cannot be used when exporting CSV to stdout")
+		}
+	} else if err := validateCSVOutputPath(outPath, app.Config.Paths.DB); err != nil {
+		return err
+	}
+
 	s, err := store.Open(ctx, app.Config.Paths.DB)
 	if err != nil {
 		return err
@@ -54,15 +67,7 @@ func (c ExportCmd) Run(ctx context.Context, app *App) error {
 		return err
 	}
 
-	outPath := c.Out
-	if outPath == "" {
-		outPath = filepath.Join(app.Config.Paths.Exports, "normalized.csv")
-	}
-	outPath = config.ExpandPath(outPath)
 	if outPath == "-" {
-		if app.OutputMode != outfmt.ModeHuman {
-			return errors.New("--json/--plain cannot be used when exporting CSV to stdout")
-		}
 		return csvexport.Write(app.Stdout, rows)
 	}
 
@@ -83,6 +88,35 @@ func parseOptionalDate(value, name string) (*time.Time, error) {
 	return &t, nil
 }
 
+func samePath(a, b string) bool {
+	absA, err := filepath.Abs(a)
+	if err != nil {
+		absA = a
+	}
+	absB, err := filepath.Abs(b)
+	if err != nil {
+		absB = b
+	}
+	return filepath.Clean(absA) == filepath.Clean(absB)
+}
+
+func validateCSVOutputPath(outPath, dbPath string) error {
+	if samePath(outPath, dbPath) {
+		return fmt.Errorf("CSV output path must not be the archive database: %s", outPath)
+	}
+	info, err := os.Lstat(outPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("CSV output path must not be an existing symlink: %s", outPath)
+	}
+	return nil
+}
+
 func writeCSVFile(path string, rows []csvexport.Row) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
@@ -92,5 +126,8 @@ func writeCSVFile(path string, rows []csvexport.Row) error {
 		return err
 	}
 	defer f.Close()
+	if err := f.Chmod(0o600); err != nil {
+		return err
+	}
 	return csvexport.Write(f, rows)
 }

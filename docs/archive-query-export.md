@@ -78,6 +78,8 @@ gobankcli export --out -
 
 Without `--out`, the file is written to `normalized.csv` inside the configured exports directory.
 
+CSV export refuses to write over the active archive database or through an existing symlink. New export files are created with private file permissions.
+
 ## Query Read-Only SQL
 
 ```bash
