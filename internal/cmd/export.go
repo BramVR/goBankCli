@@ -71,9 +71,6 @@ func (c ExportCmd) Run(ctx context.Context, app *App) error {
 		return csvexport.Write(app.Stdout, rows)
 	}
 
-	if err := validateCSVOutputPath(outPath, app.Config.Paths.DB); err != nil {
-		return err
-	}
 	if err := writeCSVFile(outPath, rows); err != nil {
 		return err
 	}
@@ -126,9 +123,6 @@ func validateCSVOutputPath(outPath, dbPath string) error {
 	}
 	if info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("CSV output path must not be an existing symlink: %s", outPath)
-	}
-	if isArchiveOutputPath(outPath, dbPath) {
-		return fmt.Errorf("CSV output path must not be the archive database: %s", outPath)
 	}
 	return nil
 }
