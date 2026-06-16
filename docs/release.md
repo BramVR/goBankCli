@@ -68,3 +68,6 @@ brew test BramVR/tap/gobankcli
 
 Check that the GitHub Release contains the changelog or release notes for the
 version before closing the release.
+
+Before closeout, confirm `README.md` and `docs/install.md` still point to the
+current Homebrew install path and do not describe the release as pending.

@@ -1,10 +1,10 @@
 ---
-summary: "Install gobankcli with Homebrew after release, or build from source."
+summary: "Install gobankcli with Homebrew, or build from source."
 read_when:
   - "Updating public install instructions."
   - "Checking the site-first setup path."
 title: "Install"
-description: "Install gobankcli with Homebrew after release, or build and verify a local binary from source."
+description: "Install gobankcli with Homebrew, or build and verify a local binary from source."
 ---
 # Install
 
@@ -13,12 +13,14 @@ browser extension, or background process is installed.
 
 ## Homebrew
 
-After the first GitHub release and Homebrew tap update, install with:
+Install the current published release with Homebrew:
 
 ```bash
 brew install BramVR/tap/gobankcli
 gobankcli --version
 ```
+
+The formula lives in [`BramVR/homebrew-tap`](https://github.com/BramVR/homebrew-tap).
 
 Upgrade with:
 
@@ -27,7 +29,7 @@ brew update
 brew upgrade BramVR/tap/gobankcli
 ```
 
-Until the first release is authorized and published, build from source.
+Build from source when testing an unreleased branch or local change.
 
 ## Source Build Requirements
 
