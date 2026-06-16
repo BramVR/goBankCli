@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -92,6 +93,46 @@ func TestClientFallsBackWhenRefreshTokenIsRejected(t *testing.T) {
 	}
 	if tokenNewCalls != 1 {
 		t.Fatalf("token/new calls = %d, want 1", tokenNewCalls)
+	}
+}
+
+func TestClientHTTPErrorOmitsProviderResponseBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/token/new/":
+			writeJSON(t, w, tokenPayload{Access: "access-token-sentinel", AccessExpires: 60, Refresh: "refresh-token-sentinel"})
+		case "/api/v2/institutions/":
+			http.Error(w, `provider body leaked access-token-sentinel callback-code-sentinel state-sentinel session-id-sentinel account-id-sentinel BE12345678901234`, http.StatusForbidden)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	p, err := New(provider.Config{
+		BaseURL: server.URL + "/api/v2",
+		Credentials: map[string]string{
+			CredentialSecretID:  "id",
+			CredentialSecretKey: "key",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = p.ListInstitutions(context.Background(), "BE")
+	if err == nil {
+		t.Fatal("expected provider HTTP error")
+	}
+	got := err.Error()
+	for _, want := range []string{Name, http.MethodGet, "/institutions/?country=BE", "403 Forbidden"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("error = %q, want safe context %q", got, want)
+		}
+	}
+	for _, sentinel := range []string{"provider body leaked", "access-token-sentinel", "callback-code-sentinel", "state-sentinel", "session-id-sentinel", "account-id-sentinel", "BE12345678901234"} {
+		if strings.Contains(got, sentinel) {
+			t.Fatalf("error = %q, contains sensitive sentinel %q", got, sentinel)
+		}
 	}
 }
 

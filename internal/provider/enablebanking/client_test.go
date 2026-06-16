@@ -204,6 +204,34 @@ func TestClientFetchTransactionsPaginatesAndNormalizesBookedOnly(t *testing.T) {
 	}
 }
 
+func TestClientHTTPErrorOmitsProviderResponseBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/aspsps" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, `provider body leaked auth-token-sentinel callback-code-sentinel state-sentinel session-id-sentinel account-id-sentinel BE12345678901234`, http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	p := newTestProvider(t, server.URL)
+	_, err := p.ListInstitutions(context.Background(), "BE")
+	if err == nil {
+		t.Fatal("expected provider HTTP error")
+	}
+	got := err.Error()
+	for _, want := range []string{Name, http.MethodGet, "/aspsps?country=BE", "403 Forbidden"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("error = %q, want safe context %q", got, want)
+		}
+	}
+	for _, sentinel := range []string{"provider body leaked", "auth-token-sentinel", "callback-code-sentinel", "state-sentinel", "session-id-sentinel", "account-id-sentinel", "BE12345678901234"} {
+		if strings.Contains(got, sentinel) {
+			t.Fatalf("error = %q, contains sensitive sentinel %q", got, sentinel)
+		}
+	}
+}
+
 func TestClientMissingCredentialsFailClearly(t *testing.T) {
 	p, err := New(provider.Config{BaseURL: "https://example.test"})
 	if err != nil {

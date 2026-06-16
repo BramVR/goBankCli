@@ -164,8 +164,8 @@ func (c *Client) do(ctx context.Context, method, endpoint string, body any, auth
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-			return fmt.Errorf("gocardless %s %s: %s: %s", method, endpoint, resp.Status, strings.TrimSpace(string(b)))
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+			return fmt.Errorf("gocardless %s %s: %s", method, endpoint, resp.Status)
 		}
 		if out == nil {
 			return nil
