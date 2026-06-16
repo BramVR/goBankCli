@@ -21,6 +21,12 @@ git push origin main vX.Y.Z
 To re-run a release for an existing tag, start the `release` workflow manually
 and pass `tag: vX.Y.Z`.
 
+## Pre-Publish Gate
+
+Before GoReleaser publishes artifacts, the release workflow runs `make ci` and
+then checks `git diff --exit-code` so generated docs and formatted Go files
+must be clean.
+
 ## Release Artifacts
 
 Expected archive names:
