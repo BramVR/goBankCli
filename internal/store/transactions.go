@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -45,6 +46,12 @@ func (s *Store) UpsertTransaction(ctx context.Context, tx provider.Transaction) 
 }
 
 func (s *Store) UpsertTransactionResult(ctx context.Context, tx provider.Transaction) (TransactionUpsertResult, error) {
+	if strings.TrimSpace(tx.AccountID) == "" {
+		return TransactionUpsertResult{}, fmt.Errorf("transaction account id is required")
+	}
+	if err := s.requireAccount(ctx, tx.AccountID); err != nil {
+		return TransactionUpsertResult{}, err
+	}
 	dedupeKey := TransactionDedupeKey(tx)
 	id := tx.ID
 	if id == "" {
@@ -83,6 +90,18 @@ on conflict(dedupe_key) do update set
 		return TransactionUpsertResult{}, err
 	}
 	return TransactionUpsertResult{ID: persistedID, Inserted: inserted}, nil
+}
+
+func (s *Store) requireAccount(ctx context.Context, accountID string) error {
+	var id string
+	err := s.db.QueryRowContext(ctx, `select id from accounts where id = ?`, accountID).Scan(&id)
+	if err == nil {
+		return nil
+	}
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("transaction account %q is not archived", accountID)
+	}
+	return err
 }
 
 func dateString(t *time.Time) string {
