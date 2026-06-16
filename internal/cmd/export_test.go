@@ -118,6 +118,29 @@ func TestExportRejectsArchiveSidecarOutputPath(t *testing.T) {
 	}
 }
 
+func TestExportRejectsMissingArchiveSidecarThroughSymlinkedParent(t *testing.T) {
+	realDir := t.TempDir()
+	linkRoot := t.TempDir()
+	aliasDir := filepath.Join(linkRoot, "alias")
+	if err := os.Symlink(realDir, aliasDir); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(realDir, "archive.db")
+	outPath := filepath.Join(aliasDir, "archive.db-wal")
+
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--db", dbPath, "export", "--out", outPath}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "archive database") {
+		t.Fatalf("Run error = %v, want archive database sidecar output rejection", err)
+	}
+	if _, err := os.Stat(filepath.Join(realDir, "archive.db-wal")); !os.IsNotExist(err) {
+		t.Fatalf("archive sidecar should not be created before rejected export: %v", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
 func TestExportRejectsExistingSymlinkOutputPath(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "archive.db")

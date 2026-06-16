@@ -71,6 +71,9 @@ func (c ExportCmd) Run(ctx context.Context, app *App) error {
 		return csvexport.Write(app.Stdout, rows)
 	}
 
+	if err := validateCSVOutputPath(outPath, app.Config.Paths.DB); err != nil {
+		return err
+	}
 	if err := writeCSVFile(outPath, rows); err != nil {
 		return err
 	}
@@ -89,15 +92,25 @@ func parseOptionalDate(value, name string) (*time.Time, error) {
 }
 
 func samePath(a, b string) bool {
-	absA, err := filepath.Abs(a)
-	if err != nil {
-		absA = a
+	return canonicalPath(a) == canonicalPath(b)
+}
+
+func canonicalPath(path string) string {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		if abs, err := filepath.Abs(resolved); err == nil {
+			return filepath.Clean(abs)
+		}
+		return filepath.Clean(resolved)
 	}
-	absB, err := filepath.Abs(b)
-	if err != nil {
-		absB = b
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	if resolvedDir, err := filepath.EvalSymlinks(dir); err == nil {
+		path = filepath.Join(resolvedDir, base)
 	}
-	return filepath.Clean(absA) == filepath.Clean(absB)
+	if abs, err := filepath.Abs(path); err == nil {
+		return filepath.Clean(abs)
+	}
+	return filepath.Clean(path)
 }
 
 func validateCSVOutputPath(outPath, dbPath string) error {
