@@ -57,6 +57,9 @@ GOBANKCLI_ENABLEBANKING_API
 contain provider secrets, and docs/tests must not include real-looking
 credentials.
 
+Enable Banking API overrides must use HTTPS for remote hosts. HTTP overrides are
+accepted only for loopback test hosts such as `127.0.0.1` or `localhost`.
+
 ## Local Data
 
 The archive contains private bank metadata and transactions. Default paths are:
