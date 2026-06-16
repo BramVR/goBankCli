@@ -101,7 +101,7 @@ func samePath(a, b string) bool {
 }
 
 func validateCSVOutputPath(outPath, dbPath string) error {
-	if samePath(outPath, dbPath) {
+	if isArchiveOutputPath(outPath, dbPath) {
 		return fmt.Errorf("CSV output path must not be the archive database: %s", outPath)
 	}
 	info, err := os.Lstat(outPath)
@@ -114,10 +114,62 @@ func validateCSVOutputPath(outPath, dbPath string) error {
 	if info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("CSV output path must not be an existing symlink: %s", outPath)
 	}
-	if sameExistingFile(outPath, dbPath) {
+	if isArchiveOutputPath(outPath, dbPath) {
 		return fmt.Errorf("CSV output path must not be the archive database: %s", outPath)
 	}
 	return nil
+}
+
+func isArchiveOutputPath(outPath, dbPath string) bool {
+	for _, protectedPath := range archiveOutputPaths(dbPath) {
+		if samePath(outPath, protectedPath) || sameExistingFile(outPath, protectedPath) {
+			return true
+		}
+	}
+	return false
+}
+
+func archiveOutputPaths(dbPath string) []string {
+	bases := []string{dbPath}
+	if resolvedDir, err := filepath.EvalSymlinks(filepath.Dir(dbPath)); err == nil {
+		bases = appendUniquePath(bases, filepath.Join(resolvedDir, filepath.Base(dbPath)))
+	}
+	if resolvedDBPath, ok := resolveSymlinkTarget(dbPath); ok {
+		bases = appendUniquePath(bases, resolvedDBPath)
+	}
+
+	var paths []string
+	for _, base := range bases {
+		paths = appendUniquePath(paths, base)
+		paths = appendUniquePath(paths, base+"-wal")
+		paths = appendUniquePath(paths, base+"-shm")
+	}
+	return paths
+}
+
+func resolveSymlinkTarget(path string) (string, bool) {
+	current := path
+	for range 16 {
+		target, err := os.Readlink(current)
+		if err != nil {
+			return current, current != path
+		}
+		if filepath.IsAbs(target) {
+			current = target
+		} else {
+			current = filepath.Join(filepath.Dir(current), target)
+		}
+	}
+	return current, current != path
+}
+
+func appendUniquePath(paths []string, path string) []string {
+	for _, existing := range paths {
+		if samePath(existing, path) {
+			return paths
+		}
+	}
+	return append(paths, path)
 }
 
 func sameExistingFile(a, b string) bool {

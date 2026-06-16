@@ -80,6 +80,44 @@ func TestExportRejectsArchiveDBAliasOutputPath(t *testing.T) {
 	}
 }
 
+func TestExportRejectsMissingArchiveDBAliasOutputPath(t *testing.T) {
+	dir := t.TempDir()
+	realDBPath := filepath.Join(dir, "archive.db")
+	dbLinkPath := filepath.Join(dir, "configured.db")
+	if err := os.Symlink(realDBPath, dbLinkPath); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--db", dbLinkPath, "export", "--out", realDBPath}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "archive database") {
+		t.Fatalf("Run error = %v, want archive database alias output rejection", err)
+	}
+	if _, err := os.Stat(realDBPath); !os.IsNotExist(err) {
+		t.Fatalf("archive database should not be created before rejected export: %v", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestExportRejectsArchiveSidecarOutputPath(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "archive.db")
+	outPath := dbPath + "-wal"
+
+	var stdout, stderr bytes.Buffer
+	err := Run(context.Background(), []string{"--db", dbPath, "export", "--out", outPath}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "archive database") {
+		t.Fatalf("Run error = %v, want archive database sidecar output rejection", err)
+	}
+	if _, err := os.Stat(outPath); !os.IsNotExist(err) {
+		t.Fatalf("archive sidecar should not be created before rejected export: %v", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
 func TestExportRejectsExistingSymlinkOutputPath(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "archive.db")
