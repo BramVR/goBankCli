@@ -23,9 +23,9 @@ and pass `tag: vX.Y.Z`.
 
 ## Pre-Publish Gate
 
-Before GoReleaser publishes artifacts, the release workflow runs `make ci` and
-then checks `git diff --exit-code` so generated docs and formatted Go files
-must be clean.
+Before GoReleaser publishes artifacts, the release workflow runs `make ci`,
+regenerates command docs with `make docs-commands`, and then checks
+`git diff --exit-code` so generated docs and formatted Go files must be clean.
 
 ## Release Artifacts
 

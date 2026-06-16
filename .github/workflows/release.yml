@@ -48,6 +48,9 @@ jobs:
       - name: Run CI
         run: make ci
 
+      - name: Regenerate command docs
+        run: make docs-commands
+
       - name: Check generated and formatted tree
         run: git diff --exit-code
 
