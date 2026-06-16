@@ -114,7 +114,22 @@ func validateCSVOutputPath(outPath, dbPath string) error {
 	if info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("CSV output path must not be an existing symlink: %s", outPath)
 	}
+	if sameExistingFile(outPath, dbPath) {
+		return fmt.Errorf("CSV output path must not be the archive database: %s", outPath)
+	}
 	return nil
+}
+
+func sameExistingFile(a, b string) bool {
+	infoA, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	infoB, err := os.Stat(b)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(infoA, infoB)
 }
 
 func writeCSVFile(path string, rows []csvexport.Row) error {

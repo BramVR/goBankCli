@@ -43,6 +43,43 @@ func TestExportRejectsArchiveDBOutputPath(t *testing.T) {
 	}
 }
 
+func TestExportRejectsArchiveDBAliasOutputPath(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	realDBPath := filepath.Join(dir, "archive.db")
+	dbLinkPath := filepath.Join(dir, "configured.db")
+	s, err := store.Open(ctx, realDBPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(realDBPath, dbLinkPath); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(realDBPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = Run(ctx, []string{"--db", dbLinkPath, "export", "--out", realDBPath}, "test", &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "archive database") {
+		t.Fatalf("Run error = %v, want archive database alias output rejection", err)
+	}
+	after, err := os.ReadFile(realDBPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(after, before) {
+		t.Fatal("archive database changed after rejected alias export")
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
 func TestExportRejectsExistingSymlinkOutputPath(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "archive.db")
