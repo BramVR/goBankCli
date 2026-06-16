@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -240,6 +241,7 @@ func (c *Client) do(ctx context.Context, method, endpoint string, body any, out 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 		return fmt.Errorf("enablebanking %s %s: %s", method, endpoint, resp.Status)
 	}
 	if out == nil {
