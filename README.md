@@ -57,15 +57,15 @@ payloads are ignored for now.
 
 ## Install
 
-After the first release is authorized and published, Homebrew will be the
-preferred install path on macOS and Linux:
+Homebrew is the preferred install path on macOS and Linux:
 
 ```bash
 brew install BramVR/tap/gobankcli
 gobankcli --version
 ```
 
-Until then, build from source.
+This installs the current published release from the
+[`BramVR/homebrew-tap`](https://github.com/BramVR/homebrew-tap) formula.
 
 Build from source:
 
@@ -491,5 +491,3 @@ Docs:
 - `category` is present in the CSV schema but currently empty.
 - Future providers are not implemented yet: Ponto, CODA/Codabox/Isabel,
   manual CSV import.
-- Homebrew/release automation is prepared but the first release has not been
-  authorized or published yet.
