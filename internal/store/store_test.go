@@ -222,6 +222,45 @@ func TestStoreUpsertTransactionDeduplicates(t *testing.T) {
 	}
 }
 
+func TestStoreRejectsTransactionWithoutArchivedAccount(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	baseTx := provider.Transaction{
+		Provider:              "gocardless",
+		ProviderTransactionID: "tx_provider",
+		BookingDate:           time.Date(2026, 5, 17, 0, 0, 0, 0, time.UTC),
+		Amount:                "42.00",
+		Currency:              "EUR",
+	}
+	for _, tc := range []struct {
+		name      string
+		accountID string
+	}{
+		{name: "blank", accountID: ""},
+		{name: "unknown", accountID: "acct_missing"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tx := baseTx
+			tx.AccountID = tc.accountID
+			if _, err := s.UpsertTransaction(ctx, tx); err == nil || !strings.Contains(err.Error(), "account") {
+				t.Fatalf("UpsertTransaction error = %v, want missing account error", err)
+			}
+		})
+	}
+	status, err := s.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Transactions != 0 {
+		t.Fatalf("transactions = %d, want 0", status.Transactions)
+	}
+}
+
 func TestStoreUpsertAccountReturnsPersistedID(t *testing.T) {
 	ctx := context.Background()
 	s, err := Open(ctx, filepath.Join(t.TempDir(), "gobankcli.db"))
@@ -349,6 +388,13 @@ func TestStoreUpsertTransactionReturnsPersistedID(t *testing.T) {
 	}
 	defer s.Close()
 
+	if _, err := s.UpsertAccount(ctx, provider.Account{
+		ID:                "acct_1",
+		Provider:          "gocardless",
+		ProviderAccountID: "acct_provider",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	tx := provider.Transaction{
 		ID:                    "stored",
 		Provider:              "gocardless",
@@ -444,6 +490,13 @@ func TestStoreAllowsSameProviderTransactionIDAcrossAccounts(t *testing.T) {
 	defer s.Close()
 
 	for _, accountID := range []string{"acct_1", "acct_2"} {
+		if _, err := s.UpsertAccount(ctx, provider.Account{
+			ID:                accountID,
+			Provider:          "gocardless",
+			ProviderAccountID: accountID + "_provider",
+		}); err != nil {
+			t.Fatal(err)
+		}
 		_, err := s.UpsertTransaction(ctx, provider.Transaction{
 			Provider:              "gocardless",
 			ProviderTransactionID: "same-provider-id",
