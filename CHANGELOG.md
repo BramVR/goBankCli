@@ -2,6 +2,7 @@
 
 ## 0.1.1 - Unreleased
 
+- Build future release artifacts with Go 1.26.4 to pick up standard-library security fixes.
 - Redact raw provider HTTP error bodies from GoCardless and Enable Banking error strings.
 - Reject CSV export destinations that target the active archive database or an existing symlink.
 - Reject remote plain-HTTP Enable Banking API overrides before provider requests are signed or sent.
